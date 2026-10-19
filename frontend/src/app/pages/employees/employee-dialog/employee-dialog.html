@@ -1,0 +1,142 @@
+<header class="dialog-heading">
+  <span class="dialog-icon">
+    <mat-icon>{{ isView ? 'person' : isEdit ? 'edit' : 'person_add' }}</mat-icon>
+  </span>
+  <div>
+    <h2 mat-dialog-title>{{ title() }}</h2>
+    <p>{{ isView ? 'Review employee information and audit details.' : 'Enter the employee profile details.' }}</p>
+  </div>
+  <button mat-icon-button mat-dialog-close aria-label="Close dialog">
+    <mat-icon>close</mat-icon>
+  </button>
+</header>
+
+<mat-dialog-content>
+  @if (errorMessage) {
+    <div class="form-error" role="alert">
+      <mat-icon>error_outline</mat-icon>{{ errorMessage }}
+    </div>
+  }
+
+  @if (isView && data.employee; as employee) {
+    <section class="detail-grid" aria-label="Employee information">
+      <div><span>Employee Code</span><strong>{{ employee.employeeCode }}</strong></div>
+      <div><span>Employee Name</span><strong>{{ employee.employeeName }}</strong></div>
+      <div><span>Email</span><strong>{{ employee.email }}</strong></div>
+      <div><span>Department</span><strong>{{ employee.department }}</strong></div>
+      <div><span>Designation</span><strong>{{ employee.designation || '—' }}</strong></div>
+      <div><span>Phone</span><strong>{{ employee.phone || '—' }}</strong></div>
+      <div><span>Location</span><strong>{{ employee.location || '—' }}</strong></div>
+      <div><span>Joining Date</span><strong>{{ employee.joiningDate ? (employee.joiningDate | date: 'mediumDate') : '—' }}</strong></div>
+      <div>
+        <span>Status</span>
+        <strong class="status-value" [class.inactive]="!employee.isActive">
+          {{ employee.isActive ? 'Active' : 'Inactive' }}
+        </strong>
+      </div>
+      <div><span>Created On</span><strong>{{ employee.createdOn | date: 'medium' }}</strong></div>
+      <div><span>Modified On</span><strong>{{ employee.modifiedOn ? (employee.modifiedOn | date: 'medium') : '—' }}</strong></div>
+    </section>
+    <section class="assigned-assets">
+      <h3>Assigned Assets</h3>
+      <p>Assignment details will appear here when the Asset Assignment module is available.</p>
+    </section>
+  } @else {
+    <form [formGroup]="form" id="employee-form" (ngSubmit)="submit()" novalidate>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Employee Code</mat-label>
+          <input matInput formControlName="employeeCode" maxlength="50" required />
+          @if (form.controls.employeeCode.hasError('required') && form.controls.employeeCode.touched) {
+            <mat-error>Employee code is required.</mat-error>
+          } @else if (form.controls.employeeCode.hasError('maxlength')) {
+            <mat-error>Employee code cannot exceed 50 characters.</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Employee Name</mat-label>
+          <input matInput formControlName="employeeName" maxlength="150" required />
+          @if (form.controls.employeeName.hasError('required') && form.controls.employeeName.touched) {
+            <mat-error>Employee name is required.</mat-error>
+          } @else if (form.controls.employeeName.hasError('maxlength')) {
+            <mat-error>Employee name cannot exceed 150 characters.</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input matInput type="email" formControlName="email" maxlength="254" required />
+          @if (form.controls.email.hasError('required') && form.controls.email.touched) {
+            <mat-error>Email is required.</mat-error>
+          } @else if (form.controls.email.hasError('email')) {
+            <mat-error>Enter a valid email address.</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Department</mat-label>
+          <input matInput formControlName="department" maxlength="100" required />
+          @if (form.controls.department.hasError('required') && form.controls.department.touched) {
+            <mat-error>Department is required.</mat-error>
+          } @else if (form.controls.department.hasError('maxlength')) {
+            <mat-error>Department cannot exceed 100 characters.</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Designation</mat-label>
+          <input matInput formControlName="designation" maxlength="100" />
+          @if (form.controls.designation.hasError('maxlength')) {
+            <mat-error>Designation cannot exceed 100 characters.</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Phone Number</mat-label>
+          <input matInput formControlName="phone" maxlength="30" />
+          @if (form.controls.phone.hasError('maxlength')) {
+            <mat-error>Phone number cannot exceed 30 characters.</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Office Location</mat-label>
+          <input matInput formControlName="location" maxlength="150" />
+          @if (form.controls.location.hasError('maxlength')) {
+            <mat-error>Location cannot exceed 150 characters.</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Joining Date</mat-label>
+          <input matInput type="date" formControlName="joiningDate" />
+          @if (form.controls.joiningDate.hasError('futureDate') && form.controls.joiningDate.touched) {
+            <mat-error>Joining date cannot be in the future.</mat-error>
+          }
+        </mat-form-field>
+      </div>
+      <div class="status-row">
+        <div>
+          <strong>Employee status</strong>
+          <span>Inactive employees cannot be selected for new asset assignments.</span>
+        </div>
+        <mat-slide-toggle color="primary" formControlName="isActive">
+          {{ form.controls.isActive.value ? 'Active' : 'Inactive' }}
+        </mat-slide-toggle>
+      </div>
+    </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>{{ isView ? 'Close' : 'Cancel' }}</button>
+  @if (!isView) {
+    <button
+      mat-flat-button
+      color="primary"
+      type="submit"
+      form="employee-form"
+      [disabled]="submitting || form.invalid"
+    >
+      @if (submitting) {
+        <mat-spinner diameter="18" />
+      } @else {
+        {{ isEdit ? 'Save Changes' : 'Save Employee' }}
+      }
+    </button>
+  }
+</mat-dialog-actions>

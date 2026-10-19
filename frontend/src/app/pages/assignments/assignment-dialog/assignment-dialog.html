@@ -1,0 +1,169 @@
+<header class="dialog-heading">
+  <div>
+    <p class="eyebrow">{{ data.mode === 'view' ? 'ASSET HISTORY' : 'INVENTORY' }}</p>
+    <h2 mat-dialog-title>{{ title() }}</h2>
+  </div>
+  <button mat-icon-button mat-dialog-close aria-label="Close dialog">
+    <mat-icon>close</mat-icon>
+  </button>
+</header>
+
+@if (data.mode === 'create') {
+  @if (loadingOptions()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <mat-dialog-content>
+      <p class="dialog-description">Select an employee and assign available assets or stock.</p>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Employee</mat-label>
+          <mat-select formControlName="employeeId">
+            <mat-option [value]="0">Select employee</mat-option>
+            @for (employee of employees(); track employee.employeeId) {
+              <mat-option [value]="employee.employeeId">
+                {{ employee.employeeName }} · {{ employee.employeeCode }}
+              </mat-option>
+            }
+          </mat-select>
+          @if (form.controls.employeeId.touched && form.controls.employeeId.invalid) {
+            <mat-error>Select an active employee.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Asset Product</mat-label>
+          <mat-select formControlName="productId">
+            <mat-option [value]="0">Select product</mat-option>
+            @for (product of products(); track product.productId) {
+              <mat-option [value]="product.productId">
+                {{ product.productName }} ({{ product.trackingType }})
+              </mat-option>
+            }
+          </mat-select>
+          @if (form.controls.productId.touched && form.controls.productId.invalid) {
+            <mat-error>Select an active product.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Assignment Date</mat-label>
+          <input matInput type="date" formControlName="assignedDate" />
+          @if (form.controls.assignedDate.touched && form.controls.assignedDate.invalid) {
+            <mat-error>Assignment date is required.</mat-error>
+          }
+        </mat-form-field>
+
+        @if (selectedProduct?.trackingType === 'Bulk') {
+          <mat-form-field appearance="outline">
+            <mat-label>Quantity</mat-label>
+            <input matInput type="number" min="1" formControlName="quantity" />
+            @if (bulkStock(); as stock) {
+              <mat-hint>{{ stock.availableQuantity }} available across {{ stock.batches.length }} receipt batches</mat-hint>
+            }
+            @if (form.controls.quantity.touched && form.controls.quantity.invalid) {
+              <mat-error>Enter a quantity greater than zero.</mat-error>
+            }
+            @if (bulkQuantityExceedsAvailability) {
+              <mat-error>Quantity exceeds available stock.</mat-error>
+            }
+          </mat-form-field>
+        }
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Remarks</mat-label>
+          <textarea matInput rows="2" formControlName="remarks"></textarea>
+        </mat-form-field>
+      </div>
+
+      @if (selectedProduct?.trackingType === 'Individual') {
+        <section class="availability-panel">
+          <h3>Available individual assets</h3>
+          @if (loadingAvailability()) {
+            <mat-progress-bar mode="indeterminate" />
+          }
+          @if (availabilityError()) {
+            <p class="inline-error" role="alert">{{ availabilityError() }}</p>
+          } @else if (!loadingAvailability() && units().length === 0) {
+            <p class="muted">No individual assets are currently available.</p>
+          } @else {
+            <div class="unit-list">
+              @for (unit of units(); track unit.assetUnitId) {
+                <mat-checkbox
+                  [checked]="isUnitSelected(unit.assetUnitId)"
+                  (change)="toggleUnit(unit.assetUnitId, $event.checked)"
+                >
+                  <span class="unit-code">{{ unit.assetCode }}</span>
+                  @if (unit.serialNumber) { <span class="muted"> · {{ unit.serialNumber }}</span> }
+                </mat-checkbox>
+              }
+            </div>
+            @if (selectedUnitIds().length > 0) {
+              <p class="selection-count">{{ selectedUnitIds().length }} asset(s) selected</p>
+            }
+          }
+        </section>
+      }
+
+      @if (availabilityError() && selectedProduct?.trackingType === 'Bulk') {
+        <p class="inline-error" role="alert">{{ availabilityError() }}</p>
+      }
+      @if (errorMessage()) {
+        <p class="form-error" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage() }}</p>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button type="button" mat-dialog-close [disabled]="submitting()">Cancel</button>
+      <button
+        mat-flat-button
+        color="primary"
+        class="submit-button"
+        type="submit"
+        [disabled]="submitting() || loadingOptions()"
+      >
+        @if (submitting()) { <mat-icon class="spin">autorenew</mat-icon> }
+        {{ submitting() ? 'Assigning…' : 'Assign Assets' }}
+      </button>
+    </mat-dialog-actions>
+  </form>
+} @else if (data.assignment; as assignment) {
+  <mat-dialog-content>
+    <div class="detail-summary">
+      <div><span>Assignment</span><strong>{{ assignment.assignmentNumber }}</strong></div>
+      <div><span>Employee</span><strong>{{ assignment.employeeName }} ({{ assignment.employeeCode }})</strong></div>
+      <div><span>Department</span><strong>{{ assignment.department }}</strong></div>
+      <div><span>Assigned On</span><strong>{{ assignment.assignedDate | date: 'mediumDate' }}</strong></div>
+      <div><span>Assigned By</span><strong>{{ assignment.assignedBy }}</strong></div>
+      <div><span>Status</span><strong>{{ assignment.status }}</strong></div>
+    </div>
+    <h3 class="items-heading">Assigned items</h3>
+    @for (item of assignment.items; track item.assignmentItemId) {
+      <section class="assigned-item">
+        <div class="item-heading">
+          <div>
+            <strong>{{ item.productName }}</strong>
+            <p>{{ item.categoryName }} · {{ item.brand }} {{ item.model || '' }}</p>
+          </div>
+          <span>{{ item.outstandingQuantity }} outstanding / {{ item.quantity }}</span>
+        </div>
+        @if (item.assetCode) {
+          <p class="muted">Asset {{ item.assetCode }}@if (item.serialNumber) { · Serial {{ item.serialNumber }} }</p>
+        }
+        @if (item.batchAllocations.length > 0) {
+          <div class="batch-list">
+            @for (batch of item.batchAllocations; track batch.receiptItemId) {
+              <p>
+                {{ batch.receiptNumber }} · {{ batch.quantity }} unit(s) · {{ batch.condition }}
+                @if (batch.warrantyExpiryDate) { · Warranty through {{ batch.warrantyExpiryDate | date: 'mediumDate' }} }
+              </p>
+            }
+          </div>
+        }
+      </section>
+    }
+    @if (assignment.remarks) { <p class="detail-remarks"><strong>Remarks:</strong> {{ assignment.remarks }}</p> }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-flat-button color="primary" mat-dialog-close class="submit-button">Close</button>
+  </mat-dialog-actions>
+}

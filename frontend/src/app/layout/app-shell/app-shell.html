@@ -1,0 +1,76 @@
+<mat-sidenav-container class="app-shell">
+  <mat-sidenav
+    class="sidebar"
+    [mode]="isMobile() ? 'over' : 'side'"
+    [opened]="!isMobile() || mobileMenuOpen()"
+    (openedChange)="onDrawerOpenedChange($event)"
+  >
+    <a class="brand" routerLink="/dashboard" (click)="closeMobileMenu()">
+      <span class="brand-mark"><mat-icon>inventory_2</mat-icon></span>
+      <span class="brand-copy">
+        <strong>AssetFlow</strong>
+        <small>IT ASSET MANAGEMENT</small>
+      </span>
+    </a>
+
+    <div class="nav-label">WORKSPACE</div>
+    <mat-nav-list aria-label="Main navigation">
+      @for (item of navigationItems; track item.path) {
+        <a
+          mat-list-item
+          [routerLink]="item.path"
+          routerLinkActive="active-link"
+          (click)="closeMobileMenu()"
+        >
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
+      }
+    </mat-nav-list>
+
+    <div class="sidebar-footer">
+      <span class="status-dot"></span>
+      <span>Workspace ready</span>
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar class="topbar">
+      <button
+        mat-icon-button
+        class="menu-button"
+        aria-label="Toggle navigation menu"
+        (click)="toggleMobileMenu()"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+      <div class="topbar-heading">
+        <span class="eyebrow">IT OPERATIONS</span>
+        <span class="topbar-title">Asset management</span>
+      </div>
+      <span class="toolbar-spacer"></span>
+      <button mat-icon-button aria-label="Notifications" class="notification-button">
+        <mat-icon>notifications_none</mat-icon>
+        <span class="notification-dot"></span>
+      </button>
+      <div class="user-profile">
+        <span class="avatar">{{ initials(user()?.username) }}</span>
+        <span class="user-copy">
+          <strong>{{ user()?.username }}</strong>
+          <small>{{ user()?.roles?.join(', ') || 'User' }}</small>
+        </span>
+        <button mat-icon-button aria-label="Sign out" (click)="logout()">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </mat-toolbar>
+
+    @if (logoutError()) {
+      <div class="logout-error" role="alert">{{ logoutError() }}</div>
+    }
+
+    <main class="page-content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

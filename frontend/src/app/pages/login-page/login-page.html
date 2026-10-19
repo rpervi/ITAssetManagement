@@ -1,0 +1,136 @@
+<main class="login-layout">
+  <section class="brand-panel" aria-label="IT Asset Management">
+    <div class="brand-panel-inner">
+      <div class="brand">
+        <span class="brand-icon"><mat-icon>inventory_2</mat-icon></span>
+        <span class="brand-name">IT Asset<span>Management</span></span>
+      </div>
+
+      <div class="brand-copy">
+        <span class="section-label">ASSET MANAGEMENT PLATFORM</span>
+        <h1>Everything you need.<br /><span>All in one place.</span></h1>
+        <p>
+          Keep your technology organized, accounted for, and ready for the people who need it.
+        </p>
+      </div>
+
+      <div class="inventory-art" aria-hidden="true">
+        <div class="art-orbit orbit-one"></div>
+        <div class="art-orbit orbit-two"></div>
+        <div class="art-grid"></div>
+        <div class="art-device monitor">
+          <div class="monitor-screen">
+            <span class="screen-bar"></span>
+            <span class="screen-row"></span>
+            <span class="screen-row short"></span>
+            <span class="screen-chart"><i></i><i></i><i></i><i></i><i></i></span>
+          </div>
+          <span class="monitor-stand"></span>
+          <span class="monitor-base"></span>
+        </div>
+        <div class="art-device laptop">
+          <div class="laptop-screen"><span></span><span></span><span></span></div>
+          <div class="laptop-base"></div>
+        </div>
+        <div class="floating-card card-tag">
+          <mat-icon>qr_code_2</mat-icon>
+          <span><b>Asset tagged</b><small>Ready to track</small></span>
+        </div>
+        <div class="floating-card card-check">
+          <mat-icon>check_circle</mat-icon>
+          <span><b>Inventory in sync</b></span>
+        </div>
+      </div>
+
+      <div class="brand-panel-footer">
+        <span>ORGANIZED INVENTORY. CONFIDENT TEAMS.</span>
+        <span class="footer-line"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="form-panel">
+    <div class="form-panel-inner">
+      <div class="company-mark" aria-label="Company logo placeholder">
+        <span class="company-mark-symbol"><mat-icon>business</mat-icon></span>
+        <span>YOUR COMPANY</span>
+      </div>
+
+      <div class="login-content">
+        <span class="form-eyebrow">ACCOUNT ACCESS</span>
+        <h2>Welcome back</h2>
+        <p class="login-intro">Sign in to continue to your workspace.</p>
+
+        @if (unavailable) {
+          <div class="message message-info" role="status">
+            We couldn’t verify your session. Please sign in again.
+          </div>
+        }
+        @if (errorMessage()) {
+          <div class="message message-error" role="alert">{{ errorMessage() }}</div>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Username</mat-label>
+            <mat-icon matPrefix>person_outline</mat-icon>
+            <input
+              matInput
+              type="text"
+              formControlName="username"
+              autocomplete="username"
+              required
+            />
+            @if (form.controls.username.hasError('required') && form.controls.username.touched) {
+              <mat-error>Username is required.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Password</mat-label>
+            <mat-icon matPrefix>lock_outline</mat-icon>
+            <input
+              matInput
+              [type]="passwordVisible() ? 'text' : 'password'"
+              formControlName="password"
+              autocomplete="current-password"
+              required
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              class="visibility-button"
+              [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+              (click)="togglePasswordVisibility()"
+            >
+              <mat-icon>{{ passwordVisible() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            @if (form.controls.password.hasError('required') && form.controls.password.touched) {
+              <mat-error>Password is required.</mat-error>
+            }
+          </mat-form-field>
+
+          <div class="form-options">
+            <span></span>
+            <a routerLink="/forgot-password">Forgot password?</a>
+          </div>
+
+          <button mat-flat-button class="login-button" type="submit" [disabled]="loading()">
+            @if (loading()) {
+              <mat-spinner diameter="20" />
+              <span>Signing in…</span>
+            } @else {
+              <span>Sign in</span>
+            }
+          </button>
+        </form>
+      </div>
+
+      <div class="form-panel-footer">
+        <span>© {{ currentYear }} IT Asset Management</span>
+        <span class="secure-label"><mat-icon>verified_user</mat-icon> SECURE ACCESS</span>
+      </div>
+    </div>
+  </section>
+</main>

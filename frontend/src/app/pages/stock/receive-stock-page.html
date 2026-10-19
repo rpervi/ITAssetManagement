@@ -1,0 +1,216 @@
+<header class="page-heading">
+  <div>
+    <p class="breadcrumb">Workspace <span>/</span> Receive Stock</p>
+    <h1>Receive Stock</h1>
+    <p class="page-description">Record new individual assets or quantity-based stock receipts.</p>
+  </div>
+  <a mat-stroked-button class="history-button" routerLink="/stock-receipt-history">
+    <mat-icon>history</mat-icon>
+    Stock Receipt History
+  </a>
+</header>
+
+<section class="entry-card">
+  <div class="entry-toolbar">
+    <div>
+      <h2>New stock receipt</h2>
+      <p>Product tracking settings determine how inventory is recorded.</p>
+    </div>
+    <mat-button-toggle-group
+      aria-label="Stock tracking mode"
+      [value]="mode()"
+      (change)="setMode($event.value)"
+    >
+      <mat-button-toggle value="Individual"><mat-icon>devices</mat-icon> Individual Asset</mat-button-toggle>
+      <mat-button-toggle value="Bulk"><mat-icon>inventory_2</mat-icon> Bulk Stock</mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+
+  @if (productsError()) {
+    <div class="form-error" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ productsError() }}</span>
+      <button mat-button type="button" (click)="loadProducts()">Retry</button>
+    </div>
+  }
+  @if (errorMessage()) {
+    <div class="form-error" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage() }}</div>
+  }
+  @if (loadingProducts()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <section class="form-section">
+      <h3>Product</h3>
+      <div class="product-selection">
+        <mat-form-field appearance="outline">
+          <mat-label>Asset product</mat-label>
+          <mat-select formControlName="productId" required (selectionChange)="selectProduct($event.value)">
+            <mat-option [value]="0" disabled>Select a product</mat-option>
+            @for (product of productsForMode(); track product.productId) {
+              <mat-option [value]="product.productId">
+                {{ product.productName }} ({{ product.brand }})
+              </mat-option>
+            }
+          </mat-select>
+          @if (form.controls.productId.hasError('min') && form.controls.productId.touched) {
+            <mat-error>Select an asset product.</mat-error>
+          }
+        </mat-form-field>
+
+        @if (selectedProduct(); as product) {
+          <div class="product-summary">
+            <div><span>Category</span><strong>{{ product.categoryName }}</strong></div>
+            <div><span>Brand</span><strong>{{ product.brand }}</strong></div>
+            <div><span>Model</span><strong>{{ product.model || '—' }}</strong></div>
+            <div><span>Tracking</span><strong>{{ product.trackingType }}</strong></div>
+          </div>
+        }
+      </div>
+    </section>
+
+    @if (mode() === 'Individual') {
+      <section class="form-section">
+        <div class="section-heading">
+          <div>
+            <h3>Individual assets</h3>
+            <p>Each row creates a separate asset record and receipt line.</p>
+          </div>
+          <button mat-stroked-button type="button" class="add-row-button" (click)="addAssetRow()">
+            <mat-icon>add</mat-icon> Add asset
+          </button>
+        </div>
+
+        <div formArrayName="assets" class="asset-rows">
+          @for (row of assetRows.controls; track $index; let i = $index) {
+            <div class="asset-row" [formGroupName]="i">
+              <div class="row-title">
+                <strong>Asset {{ i + 1 }}</strong>
+                @if (assetRows.length > 1) {
+                  <button
+                    mat-icon-button
+                    type="button"
+                    aria-label="Remove asset row"
+                    (click)="removeAssetRow(i)"
+                  ><mat-icon>delete_outline</mat-icon></button>
+                }
+              </div>
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Serial number (optional)</mat-label>
+                  <input matInput formControlName="serialNumber" maxlength="100" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Purchase date</mat-label>
+                  <input matInput type="date" formControlName="purchaseDate" required />
+                  @if (row.get('purchaseDate')?.hasError('required') && row.get('purchaseDate')?.touched) {
+                    <mat-error>Purchase date is required.</mat-error>
+                  }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Warranty expiry</mat-label>
+                  <input matInput type="date" formControlName="warrantyExpiryDate" />
+                  @if (row.get('warrantyExpiryDate')?.hasError('warrantyBeforePurchase')) {
+                    <mat-error>Warranty cannot be before purchase date.</mat-error>
+                  }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Purchase cost</mat-label>
+                  <input matInput type="number" min="0" step="0.01" formControlName="purchaseCost" required />
+                  @if (row.get('purchaseCost')?.hasError('min') && row.get('purchaseCost')?.touched) {
+                    <mat-error>Purchase cost cannot be negative.</mat-error>
+                  }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Condition</mat-label>
+                  <mat-select formControlName="condition" required>
+                    <mat-option value="New">New</mat-option>
+                    <mat-option value="Good">Good</mat-option>
+                    <mat-option value="Damaged">Damaged</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    } @else {
+      <section class="form-section">
+        <h3>Bulk stock</h3>
+        <p>Stock is recorded as a receipt batch; individual asset codes are not generated.</p>
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Received quantity</mat-label>
+            <input matInput type="number" min="1" step="1" formControlName="quantity" required />
+            @if (form.controls.quantity.hasError('min') && form.controls.quantity.touched) {
+              <mat-error>Quantity must be at least 1.</mat-error>
+            }
+            @if (form.controls.quantity.hasError('pattern') && form.controls.quantity.touched) {
+              <mat-error>Enter a whole number.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Unit purchase price</mat-label>
+            <input matInput type="number" min="0" step="0.01" formControlName="unitPrice" required />
+            @if (form.controls.unitPrice.hasError('min') && form.controls.unitPrice.touched) {
+              <mat-error>Unit price cannot be negative.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Purchase date</mat-label>
+            <input matInput type="date" formControlName="purchaseDate" required />
+            @if (form.controls.purchaseDate.hasError('required') && form.controls.purchaseDate.touched) {
+              <mat-error>Purchase date is required.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Warranty expiry</mat-label>
+            <input matInput type="date" formControlName="warrantyExpiryDate" />
+            @if (form.controls.warrantyExpiryDate.hasError('warrantyBeforePurchase')) {
+              <mat-error>Warranty cannot be before purchase date.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Condition</mat-label>
+            <mat-select formControlName="condition" required>
+              <mat-option value="New">New</mat-option>
+              <mat-option value="Good">Good</mat-option>
+              <mat-option value="Damaged">Damaged</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </section>
+    }
+
+    <section class="form-section">
+      <h3>Supplier and receipt details</h3>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Supplier / vendor</mat-label>
+          <input matInput formControlName="supplier" maxlength="200" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Invoice number</mat-label>
+          <input matInput formControlName="invoiceNumber" maxlength="100" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Remarks</mat-label>
+          <textarea matInput rows="2" formControlName="remarks" maxlength="1000"></textarea>
+        </mat-form-field>
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <span>Received date is recorded using the server's UTC time.</span>
+      <button mat-flat-button color="primary" type="submit" [disabled]="submitting() || loadingProducts()">
+        @if (submitting()) {
+          <mat-spinner diameter="18" />
+          Saving...
+        } @else {
+          <ng-container><mat-icon>save</mat-icon><span>Receive Stock</span></ng-container>
+        }
+      </button>
+    </div>
+  </form>
+</section>

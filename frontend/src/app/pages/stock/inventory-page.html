@@ -1,0 +1,127 @@
+<header class="page-heading">
+  <div>
+    <p class="breadcrumb">Workspace <span>/</span> Inventory</p>
+    <h1>Inventory</h1>
+    <p class="page-description">Review usable, assigned, damaged, and unavailable stock.</p>
+  </div>
+</header>
+
+<section class="inventory-card" aria-label="Inventory availability">
+  <div class="table-toolbar">
+    <div>
+      <h2>Stock availability</h2>
+      <p>Individual availability is based on asset status; bulk availability is derived from stock movements.</p>
+    </div>
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>Search inventory</mat-label>
+      <input matInput #searchInput (input)="applySearch(searchInput.value)" />
+    </mat-form-field>
+  </div>
+
+  @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (loadError()) {
+    <div class="inline-error" role="alert">
+      <mat-icon>error_outline</mat-icon><span>{{ loadError() }}</span>
+      <button mat-button (click)="loadAvailability()">Retry</button>
+    </div>
+  }
+
+  <div class="table-scroll">
+    <table mat-table [dataSource]="dataSource" matSort matSortActive="productName" matSortDirection="asc">
+      <ng-container matColumnDef="productName">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Product</th>
+        <td mat-cell *matCellDef="let product"><strong>{{ product.productName }}</strong></td>
+      </ng-container>
+      <ng-container matColumnDef="categoryName">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Category</th>
+        <td mat-cell *matCellDef="let product">{{ product.categoryName }}</td>
+      </ng-container>
+      <ng-container matColumnDef="trackingType">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Tracking</th>
+        <td mat-cell *matCellDef="let product"><span class="tracking-chip">{{ product.trackingType }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="availableQuantity">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Available / usable</th>
+        <td mat-cell *matCellDef="let product">
+          <strong [class.low-stock]="product.availableQuantity <= product.minimumStock">{{ product.availableQuantity }}</strong>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="assignedQuantity">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Assigned</th>
+        <td mat-cell *matCellDef="let product">{{ product.assignedQuantity }}</td>
+      </ng-container>
+      <ng-container matColumnDef="unavailableQuantity">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Unavailable</th>
+        <td mat-cell *matCellDef="let product">{{ product.unavailableQuantity }}</td>
+      </ng-container>
+      <ng-container matColumnDef="damagedQuantity">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Damaged</th>
+        <td mat-cell *matCellDef="let product">{{ product.damagedQuantity }}</td>
+      </ng-container>
+      <ng-container matColumnDef="minimumStock">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Minimum stock</th>
+        <td mat-cell *matCellDef="let product">{{ product.minimumStock }}</td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">Actions</span></th>
+        <td mat-cell *matCellDef="let product">
+          <button
+            mat-button
+            class="view-button"
+            [disabled]="product.trackingType !== 'Individual'"
+            (click)="viewAssets(product)"
+          >View assets</button>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      <tr class="mat-row empty-row" *matNoDataRow>
+        <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+          @if (!loading() && !loadError()) {
+            <div class="empty-state"><mat-icon>inventory_2</mat-icon><strong>No inventory records</strong></div>
+          }
+        </td>
+      </tr>
+    </table>
+  </div>
+  <mat-paginator [pageSizeOptions]="[10, 25, 50]" [pageSize]="25" showFirstLastButtons />
+</section>
+
+@if (selectedProduct(); as product) {
+  <section class="assets-card">
+    <header class="assets-heading">
+      <div><p>Individual inventory</p><h2>{{ product.productName }}</h2></div>
+      <button mat-icon-button aria-label="Close asset details" (click)="selectedProduct.set(null)">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+    @if (loadingAssets()) { <mat-progress-bar mode="indeterminate" /> }
+    @if (assetError()) { <div class="inline-error" role="alert">{{ assetError() }}</div> }
+    @if (!loadingAssets() && !assetError() && assets().length === 0) {
+      <p class="no-assets">No individually tracked assets have been received for this product.</p>
+    }
+    @if (assets().length > 0) {
+      <div class="table-scroll">
+        <table class="asset-table">
+          <thead>
+            <tr><th>Asset code</th><th>Serial number</th><th>Purchase date</th><th>Warranty expiry</th><th>Cost</th><th>Status</th><th>Condition</th></tr>
+          </thead>
+          <tbody>
+            @for (asset of assets(); track asset.assetUnitId) {
+              <tr>
+                <td>{{ asset.assetCode }}</td>
+                <td>{{ asset.serialNumber || '—' }}</td>
+                <td>{{ asset.purchaseDate | date: 'mediumDate' }}</td>
+                <td>{{ asset.warrantyExpiryDate ? (asset.warrantyExpiryDate | date: 'mediumDate') : '—' }}</td>
+                <td>{{ asset.purchaseCost | number: '1.2-2' }}</td>
+                <td>{{ asset.status }}</td>
+                <td>{{ asset.condition }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

@@ -1,0 +1,57 @@
+<header class="dialog-heading">
+  <span class="dialog-icon"><mat-icon>{{ isView ? 'visibility' : isEdit ? 'edit' : 'category' }}</mat-icon></span>
+  <div>
+    <h2 mat-dialog-title>{{ title() }}</h2>
+    <p>{{ isView ? 'Review the category details.' : 'Add category details to organize your assets.' }}</p>
+  </div>
+  <button mat-icon-button mat-dialog-close aria-label="Close dialog"><mat-icon>close</mat-icon></button>
+</header>
+
+<mat-dialog-content>
+  @if (errorMessage) {
+    <div class="form-error" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage }}</div>
+  }
+
+  <form [formGroup]="form" id="category-form" (ngSubmit)="submit()" novalidate>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Category name</mat-label>
+      <input matInput formControlName="categoryName" maxlength="100" required />
+      @if (form.controls.categoryName.hasError('required') && form.controls.categoryName.touched) {
+        <mat-error>Category name is required.</mat-error>
+      } @else if (form.controls.categoryName.hasError('maxlength')) {
+        <mat-error>Category name cannot exceed 100 characters.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width description-field">
+      <mat-label>Description</mat-label>
+      <textarea matInput formControlName="description" rows="3" maxlength="500"></textarea>
+      @if (form.controls.description.hasError('maxlength')) {
+        <mat-error>Description cannot exceed 500 characters.</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="status-row">
+      <div>
+        <strong>Category status</strong>
+        <span>{{ form.controls.isActive.value ? 'Active categories can be selected for products.' : 'Inactive categories are hidden from selection.' }}</span>
+      </div>
+      <mat-slide-toggle color="primary" formControlName="isActive">
+        {{ form.controls.isActive.value ? 'Active' : 'Inactive' }}
+      </mat-slide-toggle>
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>{{ isView ? 'Close' : 'Cancel' }}</button>
+  @if (!isView) {
+    <button mat-flat-button color="primary" type="submit" form="category-form" [disabled]="submitting">
+      @if (submitting) {
+        <mat-spinner diameter="18" />
+      } @else {
+        {{ isEdit ? 'Save changes' : 'Create category' }}
+      }
+    </button>
+  }
+</mat-dialog-actions>

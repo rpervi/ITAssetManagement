@@ -1,0 +1,115 @@
+<header class="dialog-heading">
+  <span class="dialog-icon">
+    <mat-icon>{{ isView ? 'visibility' : isEdit ? 'edit' : 'inventory_2' }}</mat-icon>
+  </span>
+  <div>
+    <h2 mat-dialog-title>{{ title() }}</h2>
+    <p>{{ isView ? 'Review the product details.' : 'Provide the product information and tracking method.' }}</p>
+  </div>
+  <button mat-icon-button mat-dialog-close aria-label="Close dialog"><mat-icon>close</mat-icon></button>
+</header>
+
+<mat-dialog-content>
+  @if (errorMessage) {
+    <div class="form-error" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage }}</div>
+  }
+
+  <form [formGroup]="form" id="product-form" (ngSubmit)="submit()" novalidate>
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Product name</mat-label>
+        <input matInput formControlName="productName" maxlength="150" required />
+        @if (form.controls.productName.hasError('required') && form.controls.productName.touched) {
+          <mat-error>Product name is required.</mat-error>
+        } @else if (form.controls.productName.hasError('maxlength')) {
+          <mat-error>Product name cannot exceed 150 characters.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Asset category</mat-label>
+        <mat-select formControlName="categoryId" required>
+          <mat-option [value]="0" disabled>Select a category</mat-option>
+          @for (category of data.categories; track category.categoryId) {
+            <mat-option [value]="category.categoryId" [disabled]="!category.isActive">
+              {{ category.categoryName }}{{ category.isActive ? '' : ' (Inactive)' }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.categoryId.hasError('min') && form.controls.categoryId.touched) {
+          <mat-error>An active category is required.</mat-error>
+        } @else if (form.controls.categoryId.hasError('required') && form.controls.categoryId.touched) {
+          <mat-error>An asset category is required.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Brand</mat-label>
+        <input matInput formControlName="brand" maxlength="100" required />
+        @if (form.controls.brand.hasError('required') && form.controls.brand.touched) {
+          <mat-error>Brand is required.</mat-error>
+        } @else if (form.controls.brand.hasError('maxlength')) {
+          <mat-error>Brand cannot exceed 100 characters.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Model</mat-label>
+        <input matInput formControlName="model" maxlength="100" />
+        @if (form.controls.model.hasError('maxlength')) {
+          <mat-error>Model cannot exceed 100 characters.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tracking type</mat-label>
+        <mat-select formControlName="trackingType" required>
+          <mat-option value="Individual">Individual</mat-option>
+          <mat-option value="Bulk">Bulk</mat-option>
+        </mat-select>
+        @if (form.controls.trackingType.hasError('required') && form.controls.trackingType.touched) {
+          <mat-error>Tracking type is required.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Minimum stock</mat-label>
+        <input matInput type="number" min="0" step="1" formControlName="minimumStock" required />
+        @if (form.controls.minimumStock.hasError('min') && form.controls.minimumStock.touched) {
+          <mat-error>Minimum stock cannot be negative.</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    @if (isView) {
+      <div class="view-details">
+        <div><span>Status</span><strong>{{ data.product?.isActive ? 'Active' : 'Inactive' }}</strong></div>
+        <div><span>Created on</span><strong>{{ data.product?.createdOn | date: 'medium' }}</strong></div>
+        <div><span>Modified on</span><strong>{{ data.product?.modifiedOn ? (data.product?.modifiedOn | date: 'medium') : '—' }}</strong></div>
+      </div>
+    } @else {
+      <div class="status-row">
+        <div>
+          <strong>Product status</strong>
+          <span>Inactive products remain in product and transaction history.</span>
+        </div>
+        <mat-slide-toggle color="primary" formControlName="isActive">
+          {{ form.controls.isActive.value ? 'Active' : 'Inactive' }}
+        </mat-slide-toggle>
+      </div>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>{{ isView ? 'Close' : 'Cancel' }}</button>
+  @if (!isView) {
+    <button mat-flat-button color="primary" type="submit" form="product-form" [disabled]="submitting">
+      @if (submitting) {
+        <mat-spinner diameter="18" />
+      } @else {
+        {{ isEdit ? 'Save Changes' : 'Save Product' }}
+      }
+    </button>
+  }
+</mat-dialog-actions>

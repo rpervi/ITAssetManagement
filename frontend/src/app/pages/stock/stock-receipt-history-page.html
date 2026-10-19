@@ -1,0 +1,181 @@
+<header class="page-heading">
+  <div>
+    <p class="breadcrumb">Workspace <span>/</span> Stock Receipt History</p>
+    <h1>Stock Receipt History</h1>
+    <p class="page-description">Search and review recorded stock receipt batches.</p>
+  </div>
+  <button mat-stroked-button class="export-button" (click)="exportExcel()">
+    <mat-icon>download</mat-icon> Export Excel (CSV)
+  </button>
+</header>
+
+<section class="history-card" aria-label="Stock receipt history">
+  <div class="filters">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>Search receipts</mat-label>
+      <input
+        matInput
+        #searchInput
+        [value]="search"
+        (input)="applySearch(searchInput.value)"
+        placeholder="Receipt, product, supplier, invoice"
+      />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Product</mat-label>
+      <mat-select [value]="productId" (selectionChange)="setProduct($event.value)">
+        <mat-option [value]="0">All products</mat-option>
+        @for (product of products(); track product.productId) {
+          <mat-option [value]="product.productId">{{ product.productName }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Received from</mat-label>
+      <input matInput type="date" #startDateInput [value]="startDate" (change)="setDateRange(startDateInput.value, endDateInput.value)" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Received to</mat-label>
+      <input matInput type="date" #endDateInput [value]="endDate" (change)="setDateRange(startDateInput.value, endDateInput.value)" />
+    </mat-form-field>
+    <button mat-button class="clear-button" (click)="clearFilters(searchInput); startDateInput.value = ''; endDateInput.value = ''">
+      Clear filters
+    </button>
+  </div>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (loadError()) {
+    <div class="inline-error" role="alert">
+      <mat-icon>error_outline</mat-icon><span>{{ loadError() }}</span>
+      <button mat-button (click)="loadReceipts()">Retry</button>
+    </div>
+  }
+
+  <div class="table-scroll">
+    <table
+      mat-table
+      [dataSource]="dataSource"
+      matSort
+      [matSortActive]="sortBy"
+      [matSortDirection]="sortDirection"
+      (matSortChange)="changeSort($event)"
+    >
+      <ng-container matColumnDef="receiptNumber">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Receipt number</th>
+        <td mat-cell *matCellDef="let receipt"><strong>{{ receipt.receiptNumber }}</strong></td>
+      </ng-container>
+      <ng-container matColumnDef="receivedDate">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Received date</th>
+        <td mat-cell *matCellDef="let receipt">{{ receipt.receivedDate | date: 'mediumDate' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="productName">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Product</th>
+        <td mat-cell *matCellDef="let receipt">{{ receipt.productName }}</td>
+      </ng-container>
+      <ng-container matColumnDef="trackingType">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Tracking type</th>
+        <td mat-cell *matCellDef="let receipt"><span class="tracking-chip">{{ receipt.trackingType }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="quantity">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Quantity</th>
+        <td mat-cell *matCellDef="let receipt">{{ receipt.quantity }}</td>
+      </ng-container>
+      <ng-container matColumnDef="supplier">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Supplier</th>
+        <td mat-cell *matCellDef="let receipt">{{ receipt.supplier || '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="invoiceNumber">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Invoice</th>
+        <td mat-cell *matCellDef="let receipt">{{ receipt.invoiceNumber || '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="totalAmount">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Total amount</th>
+        <td mat-cell *matCellDef="let receipt">{{ receipt.totalAmount | number: '1.2-2' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="receivedBy">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Received by</th>
+        <td mat-cell *matCellDef="let receipt">{{ receipt.receivedBy || '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">Actions</span></th>
+        <td mat-cell *matCellDef="let receipt">
+          <button mat-button class="view-button" (click)="viewReceipt(receipt.receiptId)">View</button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      <tr class="mat-row empty-row" *matNoDataRow>
+        <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+          @if (!loading() && !loadError()) {
+            <div class="empty-state">
+              <mat-icon>receipt_long</mat-icon>
+              <strong>No matching receipts</strong>
+              <span>Try changing the search or filters.</span>
+            </div>
+          }
+        </td>
+      </tr>
+    </table>
+  </div>
+  <mat-paginator
+    [length]="totalCount()"
+    [pageIndex]="pageIndex()"
+    [pageSize]="pageSize()"
+    [pageSizeOptions]="[10, 25, 50, 100]"
+    showFirstLastButtons
+    (page)="changePage($event)"
+  />
+</section>
+
+@if (loadingDetails()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+@if (detailsError()) {
+  <div class="inline-error" role="alert">{{ detailsError() }}</div>
+}
+@if (selectedReceipt(); as receipt) {
+  <section class="details-card">
+    <header class="details-heading">
+      <div>
+        <p>Receipt details</p>
+        <h2>{{ receipt.receiptNumber }}</h2>
+      </div>
+      <button mat-icon-button aria-label="Close receipt details" (click)="selectedReceipt.set(null)">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+    <div class="receipt-summary">
+      <div><span>Received date</span><strong>{{ receipt.receivedDate | date: 'medium' }}</strong></div>
+      <div><span>Supplier</span><strong>{{ receipt.supplier || '—' }}</strong></div>
+      <div><span>Invoice number</span><strong>{{ receipt.invoiceNumber || '—' }}</strong></div>
+      <div><span>Received by</span><strong>{{ receipt.receivedBy || '—' }}</strong></div>
+      <div><span>Quantity</span><strong>{{ receipt.quantity }}</strong></div>
+      <div><span>Total</span><strong>{{ receipt.totalAmount | number: '1.2-2' }}</strong></div>
+    </div>
+    @for (item of receipt.items; track item.receiptItemId) {
+      <div class="detail-line">
+        <h3>{{ item.productName }} <span>{{ item.brand }} {{ item.model }}</span></h3>
+        <p>{{ item.quantity }} × {{ item.unitPrice | number: '1.2-2' }} · {{ item.condition }} ·
+          Purchase {{ item.purchaseDate | date: 'mediumDate' }} ·
+          Warranty {{ item.warrantyExpiryDate ? (item.warrantyExpiryDate | date: 'mediumDate') : '—' }}
+        </p>
+        @if (item.assets.length) {
+          <div class="table-scroll">
+            <table class="asset-table">
+              <thead><tr><th>Asset code</th><th>Serial number</th><th>Status</th><th>Condition</th></tr></thead>
+              <tbody>
+                @for (asset of item.assets; track asset.assetUnitId) {
+                  <tr><td>{{ asset.assetCode }}</td><td>{{ asset.serialNumber || '—' }}</td><td>{{ asset.status }}</td><td>{{ asset.condition }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+  </section>
+}

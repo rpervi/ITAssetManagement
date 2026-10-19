@@ -1,0 +1,164 @@
+:host {
+  display: block;
+}
+
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 22px 24px 0;
+}
+
+.dialog-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  color: #4059d9;
+  background: #eef1ff;
+}
+
+.dialog-heading h2 {
+  margin: 0;
+  padding: 0;
+  color: #202944;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.dialog-heading p {
+  margin: 5px 0 0;
+  color: #858c9d;
+  font-size: 12px;
+}
+
+.dialog-heading button {
+  margin-left: auto;
+  color: #8790a2;
+}
+
+mat-dialog-content {
+  min-width: min(620px, calc(100vw - 48px));
+  padding: 24px !important;
+}
+
+.form-grid,
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 14px;
+}
+
+.form-grid mat-form-field {
+  width: 100%;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 0 2px;
+  border-top: 1px solid #edf0f5;
+}
+
+.status-row div,
+.detail-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.status-row strong,
+.detail-grid strong {
+  color: #30384f;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.status-row span,
+.detail-grid span,
+.assigned-assets p {
+  color: #9299aa;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.detail-grid {
+  gap: 19px 18px;
+}
+
+.detail-grid span {
+  text-transform: uppercase;
+  letter-spacing: 0.25px;
+}
+
+.status-value {
+  color: #27865e !important;
+}
+
+.status-value.inactive {
+  color: #737b8e !important;
+}
+
+.assigned-assets {
+  margin-top: 22px;
+  padding-top: 17px;
+  border-top: 1px solid #edf0f5;
+}
+
+.assigned-assets h3 {
+  margin: 0 0 5px;
+  color: #30384f;
+  font-size: 13px;
+}
+
+.assigned-assets p {
+  margin: 0;
+}
+
+mat-dialog-actions {
+  gap: 8px;
+  padding: 12px 24px 20px !important;
+}
+
+mat-dialog-actions button[mat-flat-button] {
+  min-width: 128px;
+  min-height: 40px;
+  border-radius: 8px;
+  background: #ed7d22;
+}
+
+.form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  color: #a02a35;
+  background: #fff0f1;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.form-error mat-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  font-size: 17px;
+}
+
+@media (max-width: 600px) {
+  mat-dialog-content {
+    min-width: 0;
+  }
+
+  .form-grid,
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

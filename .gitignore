@@ -1,0 +1,25 @@
+# .NET
+**/bin/
+**/obj/
+.vs/
+
+# Angular
+**/node_modules/
+**/dist/
+.angular/
+
+# VS Code
+.vscode/
+
+# Local environment
+.env
+.env.*
+!*.example
+
+# Secrets and local settings
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+
+# Temporary files
+*.log
