@@ -4,6 +4,7 @@
     <h1>Inventory</h1>
     <p class="page-description">Review usable, assigned, damaged, and unavailable stock.</p>
   </div>
+  <a mat-stroked-button routerLink="/scan-assets"><mat-icon>qr_code_scanner</mat-icon>Scan Asset</a>
 </header>
 
 <section class="inventory-card" aria-label="Inventory availability">
@@ -12,11 +13,16 @@
       <h2>Stock availability</h2>
       <p>Individual availability is based on asset status; bulk availability is derived from stock movements.</p>
     </div>
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-icon matPrefix>search</mat-icon>
-      <mat-label>Search inventory</mat-label>
-      <input matInput #searchInput (input)="applySearch(searchInput.value)" />
-    </mat-form-field>
+    <div class="table-actions">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-icon matPrefix>search</mat-icon>
+        <mat-label>Search inventory</mat-label>
+        <input matInput #searchInput (input)="applySearch(searchInput.value)" />
+      </mat-form-field>
+      <button mat-stroked-button class="export-button" (click)="exportCsv()">
+        <mat-icon>download</mat-icon> Export Excel (CSV)
+      </button>
+    </div>
   </div>
 
   @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
@@ -67,11 +73,14 @@
         <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">Actions</span></th>
         <td mat-cell *matCellDef="let product">
           <button
-            mat-button
+            mat-icon-button
             class="view-button"
-            [disabled]="product.trackingType !== 'Individual'"
-            (click)="viewAssets(product)"
-          >View assets</button>
+            [matMenuTriggerFor]="inventoryMenu"
+            [matMenuTriggerData]="{ product: product }"
+            [attr.aria-label]="'View assets for ' + product.productName"
+          >
+            <mat-icon>more_horiz</mat-icon>
+          </button>
         </td>
       </ng-container>
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -85,8 +94,16 @@
       </tr>
     </table>
   </div>
-  <mat-paginator [pageSizeOptions]="[10, 25, 50]" [pageSize]="25" showFirstLastButtons />
+  <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="10" showFirstLastButtons />
 </section>
+
+<mat-menu #inventoryMenu="matMenu">
+  <ng-template matMenuContent let-product="product">
+    <button mat-menu-item [disabled]="product.trackingType !== 'Individual'" (click)="viewAssets(product)">
+      <mat-icon>visibility</mat-icon><span>View assets</span>
+    </button>
+  </ng-template>
+</mat-menu>
 
 @if (selectedProduct(); as product) {
   <section class="assets-card">
@@ -105,12 +122,17 @@
       <div class="table-scroll">
         <table class="asset-table">
           <thead>
-            <tr><th>Asset code</th><th>Serial number</th><th>Purchase date</th><th>Warranty expiry</th><th>Cost</th><th>Status</th><th>Condition</th></tr>
+            <tr>
+              <th><mat-checkbox aria-label="Select all assets for barcode printing" (change)="toggleAllAssets($event.checked)" /></th>
+              <th>Asset code</th><th>Barcode</th><th>Serial number</th><th>Purchase date</th><th>Warranty expiry</th><th>Cost</th><th>Status</th><th>Condition</th>
+            </tr>
           </thead>
           <tbody>
             @for (asset of assets(); track asset.assetUnitId) {
-              <tr>
+              <tr [class.focused-asset]="asset.assetUnitId === focusAssetUnitId()">
+                <td><mat-checkbox [checked]="isAssetSelected(asset.assetUnitId)" (change)="toggleAsset(asset.assetUnitId, $event.checked)" [attr.aria-label]="'Select ' + asset.assetCode + ' for barcode printing'" /></td>
                 <td>{{ asset.assetCode }}</td>
+                <td><app-asset-barcode [value]="asset.assetCode" /></td>
                 <td>{{ asset.serialNumber || '—' }}</td>
                 <td>{{ asset.purchaseDate | date: 'mediumDate' }}</td>
                 <td>{{ asset.warrantyExpiryDate ? (asset.warrantyExpiryDate | date: 'mediumDate') : '—' }}</td>
@@ -122,6 +144,9 @@
           </tbody>
         </table>
       </div>
+      @if (selectedAssetIds().length > 0) {
+        <app-barcode-label-printer [assets]="printableAssets()" />
+      }
     }
   </section>
 }

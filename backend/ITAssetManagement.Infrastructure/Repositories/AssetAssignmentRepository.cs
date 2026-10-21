@@ -29,6 +29,12 @@ public sealed class AssetAssignmentRepository(AssetManagementDbContext dbContext
                 assignment.Items.Any(item => item.ProductId == filter.ProductId.Value));
         }
 
+        if (filter.ReturnableOnly)
+        {
+            query = query.Where(assignment => assignment.Items.Any(item =>
+                item.Quantity > item.Returns.Sum(assetReturn => assetReturn.ReturnQuantity)));
+        }
+
         if (filter.StartDate.HasValue)
         {
             query = query.Where(assignment => assignment.AssignedDate >= filter.StartDate.Value);
@@ -181,7 +187,11 @@ public sealed class AssetAssignmentRepository(AssetManagementDbContext dbContext
             .Where(movement => movement.ProductId == productId
                 && movement.MovementType == MovementType.Return
                 && movement.ReceiptItemId.HasValue
-                && movement.ReceiptItem!.Condition != AssetCondition.Damaged)
+                && movement.ReceiptItem!.Condition != AssetCondition.Damaged
+                && (!movement.ReferenceId.HasValue
+                    || dbContext.AssetReturns.Any(assetReturn =>
+                        assetReturn.ReturnId == movement.ReferenceId.Value
+                        && assetReturn.ReturnedCondition != AssetCondition.Damaged)))
             .GroupBy(movement => movement.ReceiptItemId!.Value)
             .Select(group => new { ReceiptItemId = group.Key, Quantity = group.Sum(item => item.Quantity) })
             .ToListAsync(cancellationToken);
@@ -341,7 +351,9 @@ public sealed class AssetAssignmentRepository(AssetManagementDbContext dbContext
                 {
                     var receiptItemId = await dbContext.StockMovements
                         .Where(movement => movement.AssetUnitId == item.AssetUnitId
-                            && movement.MovementType == MovementType.Receipt)
+                            && (movement.MovementType == MovementType.Receipt
+                                || movement.MovementType == MovementType.Adjustment
+                                && movement.Remarks == StockMovement.BulkTrackingConversionRemarks))
                         .OrderByDescending(movement => movement.MovementDate)
                         .Select(movement => movement.ReceiptItemId)
                         .FirstOrDefaultAsync(cancellationToken);
@@ -411,6 +423,148 @@ public sealed class AssetAssignmentRepository(AssetManagementDbContext dbContext
             EnsureSameRequest(duplicate, assignment);
             return (duplicate, false);
         }
+    }
+
+    public async Task<AssetAssignment> ReturnAsync(
+        int assignmentId,
+        ReturnAssetAssignmentRequest request,
+        AssetCondition returnedCondition,
+        string? actor,
+        CancellationToken cancellationToken)
+    {
+        await using IDbContextTransaction? transaction =
+            dbContext.Database.CurrentTransaction is null
+                ? await dbContext.Database.BeginTransactionAsync(
+                    IsolationLevel.Serializable,
+                    cancellationToken)
+                : null;
+        var item = await dbContext.AssetAssignmentItems
+            .Include(assignmentItem => assignmentItem.Assignment)
+            .Include(assignmentItem => assignmentItem.Product)
+            .Include(assignmentItem => assignmentItem.AssetUnit)
+            .Include(assignmentItem => assignmentItem.Returns)
+            .Include(assignmentItem => assignmentItem.BatchAllocations)
+                .ThenInclude(allocation => allocation.ReceiptItem)
+                    .ThenInclude(receiptItem => receiptItem!.Receipt)
+            .SingleOrDefaultAsync(
+                assignmentItem => assignmentItem.AssignmentId == assignmentId
+                    && assignmentItem.AssignmentItemId == request.AssignmentItemId,
+                cancellationToken);
+        if (item is null)
+        {
+            throw new InvalidAssetAssignmentException(
+                "The selected item does not belong to this assignment.");
+        }
+
+        var alreadyReturned = item.Returns.Sum(assetReturn => assetReturn.ReturnQuantity);
+        var outstanding = item.Quantity - alreadyReturned;
+        if (request.Quantity > outstanding)
+        {
+            throw new AssetAssignmentConflictException(
+                "Return quantity exceeds the outstanding quantity. Refresh the assignment and try again.");
+        }
+
+        var normalizedActor = string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim();
+        if (normalizedActor.Length > 100)
+        {
+            normalizedActor = normalizedActor[..100];
+        }
+
+        var returned = new AssetReturn
+        {
+            AssignmentItemId = item.AssignmentItemId,
+            ReturnQuantity = request.Quantity,
+            ReturnDate = DateTime.SpecifyKind(request.ReturnDate.Date, DateTimeKind.Utc),
+            ReturnedCondition = returnedCondition,
+            Remarks = string.IsNullOrWhiteSpace(request.Remarks) ? null : request.Remarks.Trim(),
+            CreatedBy = normalizedActor,
+        };
+        dbContext.AssetReturns.Add(returned);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var movements = new List<StockMovement>();
+        if (item.AssetUnit is not null)
+        {
+            item.AssetUnit.Condition = returnedCondition;
+            item.AssetUnit.Status = returnedCondition == AssetCondition.Damaged
+                ? AssetStatus.UnderRepair
+                : AssetStatus.Available;
+            item.AssetUnit.ModifiedBy = normalizedActor;
+            var receiptItemId = await dbContext.StockMovements
+                .Where(movement => movement.AssetUnitId == item.AssetUnitId
+                    && (movement.MovementType == MovementType.Receipt
+                        || movement.MovementType == MovementType.Adjustment
+                        && movement.Remarks == StockMovement.BulkTrackingConversionRemarks))
+                .OrderByDescending(movement => movement.MovementDate)
+                .Select(movement => movement.ReceiptItemId)
+                .FirstOrDefaultAsync(cancellationToken);
+            movements.Add(new StockMovement
+            {
+                ProductId = item.ProductId,
+                ReceiptItemId = receiptItemId,
+                AssetUnitId = item.AssetUnitId,
+                MovementType = MovementType.Return,
+                Quantity = request.Quantity,
+                MovementDate = returned.ReturnDate,
+                ReferenceId = returned.ReturnId,
+                Remarks = returned.Remarks,
+                CreatedBy = normalizedActor,
+            });
+        }
+        else
+        {
+            var remainingPreviouslyReturned = alreadyReturned;
+            var remainingNewReturn = request.Quantity;
+            var allocations = item.BatchAllocations
+                .OrderBy(allocation => allocation.ReceiptItem?.Receipt?.ReceivedDate)
+                .ThenBy(allocation => allocation.ReceiptItemId)
+                .ToArray();
+            foreach (var allocation in allocations)
+            {
+                var alreadyReturnedFromBatch = Math.Min(
+                    allocation.Quantity,
+                    remainingPreviouslyReturned);
+                remainingPreviouslyReturned -= alreadyReturnedFromBatch;
+                var availableToReturnFromBatch = allocation.Quantity - alreadyReturnedFromBatch;
+                var quantity = Math.Min(availableToReturnFromBatch, remainingNewReturn);
+                if (quantity == 0)
+                {
+                    continue;
+                }
+
+                movements.Add(new StockMovement
+                {
+                    ProductId = item.ProductId,
+                    ReceiptItemId = allocation.ReceiptItemId,
+                    MovementType = MovementType.Return,
+                    Quantity = quantity,
+                    MovementDate = returned.ReturnDate,
+                    ReferenceId = returned.ReturnId,
+                    Remarks = returned.Remarks,
+                    CreatedBy = normalizedActor,
+                });
+                remainingNewReturn -= quantity;
+            }
+
+            if (remainingNewReturn > 0)
+            {
+                throw new AssetAssignmentConflictException(
+                    "The original stock allocation could not be resolved. No stock was returned.");
+            }
+        }
+
+        dbContext.StockMovements.AddRange(movements);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+
+        return await AssignmentQuery()
+            .AsNoTracking()
+            .SingleAsync(
+                assignment => assignment.AssignmentId == assignmentId,
+                cancellationToken);
     }
 
     private IQueryable<AssetAssignment> AssignmentQuery() =>

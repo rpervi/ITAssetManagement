@@ -12,32 +12,32 @@ public sealed record StockProductDto(
     string TrackingType);
 
 public sealed record IndividualStockAssetRequest(
-    [property: StringLength(100)] string? SerialNumber,
-    [property: Required] DateTime PurchaseDate,
+    [param: StringLength(100)] string? SerialNumber,
+    [param: Required] DateTime PurchaseDate,
     DateTime? WarrantyExpiryDate,
-    [property: Range(typeof(decimal), "0", "9999999999999999.99")] decimal PurchaseCost,
-    [property: Required, StringLength(30)] string Condition);
+    [param: Range(typeof(decimal), "0", "9999999999999999.99")] decimal PurchaseCost,
+    [param: Required, StringLength(30)] string Condition);
 
 public sealed record ReceiveIndividualStockRequest(
-    [property: Required] Guid IdempotencyKey,
-    [property: Range(1, int.MaxValue)] int ProductId,
-    [property: Required, MinLength(1), MaxLength(200)]
+    [param: Required] Guid IdempotencyKey,
+    [param: Range(1, int.MaxValue)] int ProductId,
+    [param: Required, MinLength(1), MaxLength(200)]
     IReadOnlyList<IndividualStockAssetRequest> Assets,
-    [property: StringLength(200)] string? Supplier,
-    [property: StringLength(100)] string? InvoiceNumber,
-    [property: StringLength(1000)] string? Remarks);
+    [param: StringLength(200)] string? Supplier,
+    [param: StringLength(100)] string? InvoiceNumber,
+    [param: StringLength(1000)] string? Remarks);
 
 public sealed record ReceiveBulkStockRequest(
-    [property: Required] Guid IdempotencyKey,
-    [property: Range(1, int.MaxValue)] int ProductId,
-    [property: Range(1, int.MaxValue)] int Quantity,
-    [property: Range(typeof(decimal), "0", "9999999999999999.99")] decimal UnitPrice,
-    [property: Required] DateTime PurchaseDate,
+    [param: Required] Guid IdempotencyKey,
+    [param: Range(1, int.MaxValue)] int ProductId,
+    [param: Range(1, int.MaxValue)] int Quantity,
+    [param: Range(typeof(decimal), "0", "9999999999999999.99")] decimal UnitPrice,
+    [param: Required] DateTime PurchaseDate,
     DateTime? WarrantyExpiryDate,
-    [property: Required, StringLength(30)] string Condition,
-    [property: StringLength(200)] string? Supplier,
-    [property: StringLength(100)] string? InvoiceNumber,
-    [property: StringLength(1000)] string? Remarks);
+    [param: Required, StringLength(30)] string Condition,
+    [param: StringLength(200)] string? Supplier,
+    [param: StringLength(100)] string? InvoiceNumber,
+    [param: StringLength(1000)] string? Remarks);
 
 public sealed record StockReceiptItemResponse(
     int ReceiptItemId,
@@ -61,6 +61,26 @@ public sealed record StockAssetUnitResponse(
     decimal PurchaseCost,
     string Status,
     string Condition);
+
+public sealed record AssetBarcodeDetailsResponse(
+    int AssetUnitId,
+    int ProductId,
+    string AssetCode,
+    string AssetName,
+    string AssetType,
+    string CategoryName,
+    string Manufacturer,
+    string? Model,
+    string? SerialNumber,
+    string? AssignedEmployee,
+    string? Department,
+    string? CurrentLocation,
+    string Status,
+    DateTime PurchaseDate);
+
+public sealed record BulkStockConversionResponse(
+    int ProductId,
+    int AssetsCreated);
 
 public sealed record StockReceiptResponse(
     int ReceiptId,
@@ -134,7 +154,13 @@ public sealed record StockReceiptFilter(
     string SortBy,
     string SortDirection);
 
-public sealed record StockMovementFilter(int? ProductId, int Page, int PageSize);
+public sealed record StockMovementFilter(
+    int? ProductId,
+    string? MovementType,
+    DateTime? StartDate,
+    DateTime? EndDate,
+    int Page,
+    int PageSize);
 
 public sealed record PagedStockMovementsResponse(
     IReadOnlyList<StockMovementResponse> Items,

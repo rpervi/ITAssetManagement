@@ -95,6 +95,17 @@ export interface AssignmentQuery {
   pageSize: number;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
+  returnableOnly?: boolean;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface ReturnAssignmentRequest {
+  assignmentItemId: number;
+  quantity: number;
+  returnDate: string;
+  returnedCondition: string;
+  remarks: string | null;
 }
 
 export interface CreateAssignmentRequest {

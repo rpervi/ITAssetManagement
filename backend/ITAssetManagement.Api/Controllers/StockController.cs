@@ -167,10 +167,54 @@ public sealed class StockController(IStockService stockService) : ControllerBase
         }
     }
 
+    [HttpGet("assets/{assetCode}")]
+    [Authorize(Policy = AuthPolicies.ViewInventory)]
+    public async Task<ActionResult<AssetBarcodeDetailsResponse>> GetAssetByCode(
+        string assetCode,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var asset = await stockService.GetAssetByCodeAsync(assetCode, cancellationToken);
+            return asset is null ? NotFound() : Ok(asset);
+        }
+        catch (InvalidStockRequestException exception)
+        {
+            return BadRequest(CreateProblem(
+                StatusCodes.Status400BadRequest, "Invalid asset barcode", exception.Message));
+        }
+    }
+
+    [HttpPost("products/{productId:int}/convert-to-individual")]
+    [Authorize(Policy = AuthPolicies.ManageStock)]
+    public async Task<IActionResult> ConvertBulkStockToIndividual(
+        int productId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await stockService.ConvertBulkStockToIndividualAsync(
+                productId, CurrentActor(), cancellationToken));
+        }
+        catch (InvalidStockRequestException exception)
+        {
+            return BadRequest(CreateProblem(
+                StatusCodes.Status400BadRequest, "Invalid product ID", exception.Message));
+        }
+        catch (BulkStockConversionException exception)
+        {
+            return Conflict(CreateProblem(
+                StatusCodes.Status409Conflict, "Bulk stock cannot be converted", exception.Message));
+        }
+    }
+
     [HttpGet("movements")]
     [Authorize(Policy = AuthPolicies.ViewInventory)]
     public async Task<ActionResult<PagedStockMovementsResponse>> GetMovements(
         [FromQuery] int? productId,
+        [FromQuery] string? movementType,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken cancellationToken = default)
@@ -178,7 +222,7 @@ public sealed class StockController(IStockService stockService) : ControllerBase
         try
         {
             return Ok(await stockService.GetMovementsAsync(
-                productId, page, pageSize, cancellationToken));
+                productId, movementType, startDate, endDate, page, pageSize, cancellationToken));
         }
         catch (InvalidStockRequestException exception)
         {

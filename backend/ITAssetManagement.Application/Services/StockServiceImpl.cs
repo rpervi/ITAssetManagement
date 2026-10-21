@@ -318,8 +318,65 @@ public sealed class StockServiceImpl(IStockRepository repository) : IStockServic
         return units.Select(ToUnitResponse).ToArray();
     }
 
+    public async Task<AssetBarcodeDetailsResponse?> GetAssetByCodeAsync(
+        string assetCode,
+        CancellationToken cancellationToken)
+    {
+        var normalizedCode = assetCode.Trim();
+        if (normalizedCode.Length is 0 or > 100)
+        {
+            throw new InvalidStockRequestException("Enter a valid asset barcode.");
+        }
+
+        var unit = await repository.GetAssetUnitByCodeAsync(normalizedCode, cancellationToken);
+        if (unit is null)
+        {
+            return null;
+        }
+
+        var currentAssignment = unit.AssignmentItems
+            .Where(item => item.Assignment is not null
+                && item.Quantity > item.Returns.Sum(assetReturn => assetReturn.ReturnQuantity))
+            .OrderByDescending(item => item.Assignment!.AssignedDate)
+            .ThenByDescending(item => item.Assignment!.AssignmentId)
+            .FirstOrDefault()?.Assignment;
+        return new AssetBarcodeDetailsResponse(
+            unit.AssetUnitId,
+            unit.ProductId,
+            unit.AssetCode,
+            unit.Product?.ProductName ?? string.Empty,
+            unit.Product?.TrackingType.ToString() ?? string.Empty,
+            unit.Product?.Category?.CategoryName ?? string.Empty,
+            unit.Product?.Brand ?? string.Empty,
+            unit.Product?.Model,
+            unit.SerialNumber,
+            currentAssignment?.Employee?.EmployeeName,
+            currentAssignment?.Employee?.Department,
+            currentAssignment?.Employee?.Location,
+            unit.Status.ToString(),
+            unit.PurchaseDate);
+    }
+
+    public async Task<BulkStockConversionResponse> ConvertBulkStockToIndividualAsync(
+        int productId,
+        string? actor,
+        CancellationToken cancellationToken)
+    {
+        if (productId <= 0)
+        {
+            throw new InvalidStockRequestException("Product ID must be positive.");
+        }
+
+        var assetsCreated = await repository.ConvertBulkStockToIndividualAsync(
+            productId, actor, cancellationToken);
+        return new BulkStockConversionResponse(productId, assetsCreated);
+    }
+
     public async Task<PagedStockMovementsResponse> GetMovementsAsync(
         int? productId,
+        string? movementType,
+        DateTime? startDate,
+        DateTime? endDate,
         int page,
         int pageSize,
         CancellationToken cancellationToken)
@@ -330,8 +387,32 @@ public sealed class StockServiceImpl(IStockRepository repository) : IStockServic
             throw new InvalidStockRequestException("Product ID must be positive.");
         }
 
+        if (startDate.HasValue && endDate.HasValue && startDate.Value.Date > endDate.Value.Date)
+        {
+            throw new InvalidStockRequestException("Start date cannot be after end date.");
+        }
+
+        string? normalizedMovementType = null;
+        if (!string.IsNullOrWhiteSpace(movementType))
+        {
+            if (!Enum.TryParse<MovementType>(movementType.Trim(), true, out var parsedMovementType)
+                || !Enum.IsDefined(parsedMovementType))
+            {
+                throw new InvalidStockRequestException("Select a valid stock movement type.");
+            }
+
+            normalizedMovementType = parsedMovementType.ToString();
+        }
+
         var (movements, totalCount) = await repository.GetMovementsAsync(
-            new StockMovementFilter(productId, page, pageSize), cancellationToken);
+            new StockMovementFilter(
+                productId,
+                normalizedMovementType,
+                startDate?.Date,
+                endDate?.Date,
+                page,
+                pageSize),
+            cancellationToken);
         var items = movements.Select(movement => new StockMovementResponse(
             movement.MovementId,
             movement.ProductId,

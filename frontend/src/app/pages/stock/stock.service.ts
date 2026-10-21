@@ -4,10 +4,13 @@ import { Observable } from 'rxjs';
 import {
   PagedStockMovements,
   PagedStockReceipts,
+  AssetBarcodeDetails,
+  BulkStockConversion,
   ReceiveBulkStockRequest,
   ReceiveIndividualStockRequest,
   StockAssetUnit,
   StockAvailability,
+  StockMovementQuery,
   StockProduct,
   StockReceipt,
 } from './stock.models';
@@ -90,9 +93,29 @@ export class StockService {
     );
   }
 
-  getMovements(page = 1, pageSize = 50, productId?: number): Observable<PagedStockMovements> {
-    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (productId) params = params.set('productId', productId);
+  getAssetByBarcode(assetCode: string): Observable<AssetBarcodeDetails> {
+    return this.http.get<AssetBarcodeDetails>(
+      `${this.endpoint}/assets/${encodeURIComponent(assetCode)}`,
+      { withCredentials: true },
+    );
+  }
+
+  convertBulkStockToIndividual(productId: number): Observable<BulkStockConversion> {
+    return this.http.post<BulkStockConversion>(
+      `${this.endpoint}/products/${productId}/convert-to-individual`,
+      {},
+      { withCredentials: true },
+    );
+  }
+
+  getMovements(query: StockMovementQuery): Observable<PagedStockMovements> {
+    let params = new HttpParams()
+      .set('page', query.page)
+      .set('pageSize', query.pageSize);
+    if (query.productId) params = params.set('productId', query.productId);
+    if (query.movementType) params = params.set('movementType', query.movementType);
+    if (query.startDate) params = params.set('startDate', query.startDate);
+    if (query.endDate) params = params.set('endDate', query.endDate);
     return this.http.get<PagedStockMovements>(`${this.endpoint}/movements`, {
       params,
       withCredentials: true,

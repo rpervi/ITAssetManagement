@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -41,6 +41,8 @@ export class AppShell {
     { initialValue: false },
   );
   protected readonly mobileMenuOpen = signal(false);
+  protected readonly sidebarCollapsed = signal(false);
+  protected readonly searchQuery = signal('');
   protected readonly logoutError = signal('');
   protected readonly user = this.authService.currentUser;
 
@@ -50,12 +52,39 @@ export class AppShell {
     { label: 'Asset Products', path: '/asset-products', icon: 'devices_other' },
     { label: 'Receive Stock', path: '/receive-stock', icon: 'move_to_inbox' },
     { label: 'Inventory', path: '/inventory', icon: 'inventory_2' },
+    { label: 'Barcode Labels', path: '/generate-barcodes', icon: 'qr_code_2' },
+    { label: 'Scan Asset', path: '/scan-assets', icon: 'qr_code_scanner' },
     { label: 'Employees', path: '/employees', icon: 'groups' },
     { label: 'Assign Assets', path: '/assign-assets', icon: 'assignment_ind' },
     { label: 'Return Assets', path: '/return-assets', icon: 'keyboard_return' },
     { label: 'History', path: '/history', icon: 'history' },
     { label: 'Reports', path: '/reports', icon: 'bar_chart' },
   ];
+
+  protected readonly filteredNavigationItems = computed(() => {
+    const query = this.searchQuery().trim().toLocaleLowerCase();
+    if (!query) return [];
+    return this.navigationItems.filter((item) =>
+      item.label.toLocaleLowerCase().includes(query),
+    );
+  });
+
+  protected toggleSidebar(): void {
+    if (this.isMobile()) {
+      this.toggleMobileMenu();
+      return;
+    }
+
+    this.sidebarCollapsed.update((collapsed) => !collapsed);
+  }
+
+  protected updateSearch(value: string): void {
+    this.searchQuery.set(value);
+  }
+
+  protected closeSearch(): void {
+    this.searchQuery.set('');
+  }
 
   protected toggleMobileMenu(): void {
     this.mobileMenuOpen.update((isOpen) => !isOpen);

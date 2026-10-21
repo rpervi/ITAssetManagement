@@ -1,0 +1,286 @@
+:host {
+  display: block;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-heading {
+  margin-bottom: 24px;
+}
+
+.breadcrumb {
+  margin: 0 0 9px;
+  color: #9299aa;
+  font-size: 11px;
+}
+
+.breadcrumb span {
+  padding: 0 5px;
+  color: #c3c7d1;
+}
+
+h1 {
+  margin: 0;
+  color: #202944;
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 650;
+  letter-spacing: -0.8px;
+}
+
+.page-description {
+  margin: 8px 0 0;
+  color: #858c9d;
+  font-size: 13px;
+}
+
+.scan-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.scan-card,
+.details-card {
+  border: 1px solid #e9ecf3;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgb(32 41 68 / 3%);
+}
+
+.scan-card mat-card-content,
+.details-card mat-card-content {
+  padding: 22px;
+}
+
+h2 {
+  margin: 0;
+  color: #28314c;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.scan-card p {
+  margin: 7px 0 16px;
+  color: #858c9d;
+  font-size: 11px;
+}
+
+.camera-frame {
+  position: relative;
+  display: grid;
+  min-height: 260px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 9px;
+  background: #171c2c;
+}
+
+video {
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+}
+
+.camera-placeholder {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #c4c9d6;
+  font-size: 11px;
+}
+
+.camera-placeholder mat-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 36px;
+}
+
+.scan-actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+}
+
+.scan-actions button {
+  min-height: 40px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.scan-actions button[mat-flat-button] {
+  background: #4059d9;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: #9299aa;
+  font-size: 10px;
+}
+
+.divider::before,
+.divider::after {
+  height: 1px;
+  flex: 1;
+  background: #edf0f5;
+  content: '';
+}
+
+.manual-scan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.manual-scan label {
+  grid-column: 1 / -1;
+  color: #515a70;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.manual-scan input {
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid #dfe3ec;
+  border-radius: 7px;
+  color: #30384f;
+  font: inherit;
+  font-size: 12px;
+}
+
+.manual-scan input:focus {
+  border-color: #5369d5;
+  outline: 2px solid #5369d522;
+}
+
+.manual-scan button {
+  min-height: 42px;
+  border-radius: 7px;
+  font-size: 10px;
+}
+
+.feedback {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 13px 0 0 !important;
+  padding: 10px;
+  border-radius: 7px;
+  line-height: 1.5;
+}
+
+.feedback.error {
+  color: #a72c23;
+  background: #fff1f0;
+}
+
+.feedback.success {
+  color: #27865e;
+  background: #eaf8f1;
+}
+
+.feedback mat-icon {
+  flex: 0 0 auto;
+  font-size: 18px;
+}
+
+.details-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+  margin: 17px 0 20px;
+}
+
+.details-list > div {
+  padding: 11px 0;
+  border-bottom: 1px solid #f0f2f6;
+}
+
+.details-list dt {
+  margin-bottom: 4px;
+  color: #9299aa;
+  font-size: 9px;
+}
+
+.details-list dd {
+  margin: 0;
+  color: #30384f;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.status-chip {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 14px;
+  color: #5369d5;
+  background: #eef1ff;
+}
+
+.details-card a[mat-flat-button] {
+  min-height: 40px;
+  border-radius: 7px;
+  background: #4059d9;
+  font-size: 10px;
+}
+
+.scan-another {
+  margin-left: 8px;
+  font-size: 10px;
+}
+
+.empty-details {
+  display: flex;
+  min-height: 300px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #9299aa;
+  text-align: center;
+}
+
+.empty-details mat-icon {
+  width: 34px;
+  height: 34px;
+  color: #aab1c0;
+  font-size: 34px;
+}
+
+.empty-details strong {
+  color: #4f586e;
+  font-size: 12px;
+}
+
+.empty-details span {
+  max-width: 250px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+@media (max-width: 800px) {
+  .scan-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 500px) {
+  .scan-card mat-card-content,
+  .details-card mat-card-content {
+    padding: 16px;
+  }
+
+  .camera-frame {
+    min-height: 220px;
+  }
+
+  .details-list {
+    grid-template-columns: 1fr;
+  }
+}

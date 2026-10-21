@@ -1,0 +1,58 @@
+<section class="barcode-print-area" [class.size-50x30]="labelSize() === '50x30'" [class.size-70x35]="labelSize() === '70x35'" [class.size-100x50]="labelSize() === '100x50'">
+  <div class="print-controls">
+    <div>
+      <h3>Barcode labels</h3>
+      <p>{{ labels().length }} asset label(s) selected</p>
+    </div>
+    <mat-form-field appearance="outline">
+      <mat-label>Company name</mat-label>
+      <input
+        matInput
+        [value]="companyName()"
+        (input)="updateCompanyName(companyInput.value)"
+        #companyInput
+        maxlength="100"
+      />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Code format</mat-label>
+      <mat-select [value]="format()" (selectionChange)="updateFormat($event.value)">
+        <mat-option value="CODE128">Code 128</mat-option>
+        <mat-option value="QR">QR Code</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Label size</mat-label>
+      <mat-select [value]="labelSize()" (selectionChange)="updateLabelSize($event.value)">
+        <mat-option value="50x30">50 × 30 mm</mat-option>
+        <mat-option value="70x35">70 × 35 mm</mat-option>
+        <mat-option value="100x50">100 × 50 mm</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <button mat-flat-button color="primary" (click)="print()" [disabled]="labels().length === 0">
+      <mat-icon>print</mat-icon>Print labels
+    </button>
+  </div>
+
+  @if (companyNameError()) {
+    <p class="render-error" role="alert">{{ companyNameError() }}</p>
+  }
+  @if (renderError()) {
+    <p class="render-error" role="alert">{{ renderError() }}</p>
+  }
+  <div class="label-preview" aria-label="Barcode label print preview">
+    @for (label of labels(); track label.assetUnitId) {
+      <article class="asset-label">
+        @if (companyName()) { <strong class="company-name">{{ companyName() }}</strong> }
+        <img
+          class="barcode-image"
+          [class.qr-image]="format() === 'QR'"
+          [src]="label.image"
+          [alt]="format() + ' code for ' + label.assetCode"
+        />
+        <strong class="asset-code">{{ label.assetCode }}</strong>
+        <span class="asset-name">{{ label.assetName }}</span>
+      </article>
+    }
+  </div>
+</section>

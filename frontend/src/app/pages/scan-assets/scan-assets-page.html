@@ -1,0 +1,90 @@
+<header class="page-heading">
+  <div>
+    <p class="breadcrumb">Workspace <span>/</span> Scan Asset</p>
+    <h1>Scan Asset</h1>
+    <p class="page-description">Scan an asset barcode to view its current record.</p>
+  </div>
+</header>
+
+<section class="scan-grid">
+  <mat-card class="scan-card">
+    <mat-card-content>
+      <h2>Scan a barcode</h2>
+      <p>Use your device camera or a connected USB / handheld scanner.</p>
+      <div class="camera-frame">
+        <video #videoElement autoplay muted playsinline aria-label="Camera barcode preview"></video>
+        @if (!cameraActive()) {
+          <div class="camera-placeholder">
+            <mat-icon>qr_code_scanner</mat-icon>
+            <span>Camera is off</span>
+          </div>
+        }
+      </div>
+      <div class="scan-actions">
+        @if (cameraActive()) {
+          <button mat-stroked-button (click)="stopCamera()"><mat-icon>videocam_off</mat-icon>Stop camera</button>
+        } @else {
+          <button mat-flat-button color="primary" (click)="startCamera()" [disabled]="loading()">
+            <mat-icon>photo_camera</mat-icon>Start camera
+          </button>
+        }
+      </div>
+      <div class="divider"><span>or use a barcode scanner</span></div>
+      <form class="manual-scan" (submit)="submitManualScan($event, barcodeInput)">
+        <label for="barcode-value">Scan or enter asset code</label>
+        <input
+          #barcodeInput
+          id="barcode-value"
+          type="text"
+          autocomplete="off"
+          placeholder="Scan barcode or enter AST-000001"
+          [disabled]="loading()"
+        />
+        <button mat-stroked-button type="submit" [disabled]="loading()">
+          <mat-icon>search</mat-icon>Find asset
+        </button>
+      </form>
+      @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+      @if (errorMessage()) {
+        <p class="feedback error" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage() }}</p>
+      }
+      @if (scanMessage() && !errorMessage()) {
+        <p class="feedback success" role="status"><mat-icon>check_circle</mat-icon>{{ scanMessage() }}</p>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="details-card">
+    <mat-card-content>
+      <h2>Asset details</h2>
+      @if (asset(); as scannedAsset) {
+        <dl class="details-list">
+          <div><dt>Asset ID</dt><dd>{{ scannedAsset.assetCode }} (#{{ scannedAsset.assetUnitId }})</dd></div>
+          <div><dt>Asset name</dt><dd>{{ scannedAsset.assetName }}</dd></div>
+          <div><dt>Asset type / category</dt><dd>{{ scannedAsset.assetType }} · {{ scannedAsset.categoryName }}</dd></div>
+          <div><dt>Manufacturer</dt><dd>{{ scannedAsset.manufacturer || '—' }}</dd></div>
+          <div><dt>Model</dt><dd>{{ scannedAsset.model || '—' }}</dd></div>
+          <div><dt>Serial number</dt><dd>{{ scannedAsset.serialNumber || '—' }}</dd></div>
+          <div><dt>Assigned employee</dt><dd>{{ scannedAsset.assignedEmployee || 'Unassigned' }}</dd></div>
+          <div><dt>Department</dt><dd>{{ scannedAsset.department || '—' }}</dd></div>
+          <div><dt>Current location</dt><dd>{{ scannedAsset.currentLocation || '—' }}</dd></div>
+          <div><dt>Status</dt><dd><span class="status-chip">{{ scannedAsset.status }}</span></dd></div>
+          <div><dt>Purchase date</dt><dd>{{ scannedAsset.purchaseDate | date: 'mediumDate' }}</dd></div>
+        </dl>
+        <a
+          mat-flat-button
+          color="primary"
+          routerLink="/inventory"
+          [queryParams]="{ productId: scannedAsset.productId, assetUnitId: scannedAsset.assetUnitId }"
+        ><mat-icon>open_in_new</mat-icon>View Asset Details</a>
+        <button mat-button class="scan-another" (click)="resetScan()">Scan another asset</button>
+      } @else {
+        <div class="empty-details">
+          <mat-icon>devices_other</mat-icon>
+          <strong>Asset details appear here</strong>
+          <span>Scan a QR code or Code 128 barcode to look up its record.</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</section>

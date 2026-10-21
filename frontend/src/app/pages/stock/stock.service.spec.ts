@@ -90,4 +90,62 @@ describe('StockService', () => {
     expect(unitsRequest.request.withCredentials).toBe(true);
     unitsRequest.flush([]);
   });
+
+  it('looks up an asset using its barcode value with credentials', () => {
+    service.getAssetByBarcode('AST-000017').subscribe();
+
+    const request = httpTesting.expectOne('/api/stock/assets/AST-000017');
+    expect(request.request.method).toBe('GET');
+    expect(request.request.withCredentials).toBe(true);
+    request.flush({
+      assetUnitId: 17,
+      productId: 4,
+      assetCode: 'AST-000017',
+      assetName: 'Laptop',
+      assetType: 'Individual',
+      categoryName: 'Computers',
+      manufacturer: 'Example',
+      model: 'L1',
+      serialNumber: 'SERIAL-17',
+      assignedEmployee: null,
+      department: null,
+      currentLocation: null,
+      status: 'Available',
+      purchaseDate: '2026-10-19',
+    });
+  });
+
+  it('converts bulk stock into individual assets with credentials', () => {
+    service.convertBulkStockToIndividual(4).subscribe((result) =>
+      expect(result).toEqual({ productId: 4, assetsCreated: 10 }),
+    );
+
+    const request = httpTesting.expectOne('/api/stock/products/4/convert-to-individual');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    expect(request.request.withCredentials).toBe(true);
+    request.flush({ productId: 4, assetsCreated: 10 });
+  });
+
+  it('loads filtered stock movement history', () => {
+    service.getMovements({
+      page: 2,
+      pageSize: 25,
+      productId: 4,
+      movementType: 'Return',
+      startDate: '2026-10-01',
+      endDate: '2026-10-31',
+    }).subscribe();
+
+    const request = httpTesting.expectOne(
+      (candidate) => candidate.url === '/api/stock/movements',
+    );
+    expect(request.request.params.get('page')).toBe('2');
+    expect(request.request.params.get('pageSize')).toBe('25');
+    expect(request.request.params.get('productId')).toBe('4');
+    expect(request.request.params.get('movementType')).toBe('Return');
+    expect(request.request.params.get('startDate')).toBe('2026-10-01');
+    expect(request.request.params.get('endDate')).toBe('2026-10-31');
+    request.flush({ items: [], totalCount: 0, page: 2, pageSize: 25 });
+  });
 });

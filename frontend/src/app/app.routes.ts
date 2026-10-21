@@ -30,10 +30,9 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('./pages/placeholder-page/placeholder-page').then(
-            (page) => page.PlaceholderPage,
+          import('./pages/dashboard/dashboard-page').then(
+            (page) => page.DashboardPage,
           ),
-        data: { title: 'Dashboard' },
       },
       {
         path: 'asset-categories',
@@ -71,6 +70,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'generate-barcodes',
+        loadComponent: () =>
+          import('./pages/barcodes/generate-barcodes-page').then(
+            (page) => page.GenerateBarcodesPage,
+          ),
+      },
+      {
+          path: 'scan-assets',
+          loadComponent: () =>
+            import('./pages/scan-assets/scan-assets-page').then(
+              (page) => page.ScanAssetsPage,
+            ),
+      },
+      {
         path: 'employees',
         loadComponent: () =>
           import('./pages/employees/employees-page').then(
@@ -84,18 +97,27 @@ export const routes: Routes = [
             (page) => page.AssignmentsPage,
           ),
       },
-      ...[
-        ['return-assets', 'Return Assets'],
-        ['history', 'History'],
-        ['reports', 'Reports'],
-      ].map(([path, title]) => ({
-        path,
+      {
+        path: 'return-assets',
         loadComponent: () =>
-          import('./pages/placeholder-page/placeholder-page').then(
-            (page) => page.PlaceholderPage,
+          import('./pages/returns/return-assets-page').then(
+            (page) => page.ReturnAssetsPage,
           ),
-        data: { title },
-      })),
+      },
+      {
+        path: 'history',
+        loadComponent: () =>
+          import('./pages/history/history-page').then(
+            (page) => page.HistoryPage,
+          ),
+      },
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./pages/reports/reports-page').then(
+            (page) => page.ReportsPage,
+          ),
+      },
     ],
   },
   { path: '**', redirectTo: 'login' },

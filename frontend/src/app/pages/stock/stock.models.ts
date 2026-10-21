@@ -49,6 +49,34 @@ export interface StockAssetUnit {
   condition: string;
 }
 
+export interface AssetBarcodeDetails {
+  assetUnitId: number;
+  productId: number;
+  assetCode: string;
+  assetName: string;
+  assetType: string;
+  categoryName: string;
+  manufacturer: string;
+  model: string | null;
+  serialNumber: string | null;
+  assignedEmployee: string | null;
+  department: string | null;
+  currentLocation: string | null;
+  status: string;
+  purchaseDate: string;
+}
+
+export interface BulkStockConversion {
+  productId: number;
+  assetsCreated: number;
+}
+
+export interface PrintableAsset {
+  assetUnitId: number;
+  assetCode: string;
+  assetName: string;
+}
+
 export interface StockReceiptItem {
   receiptItemId: number;
   productId: number;
@@ -128,4 +156,13 @@ export interface PagedStockMovements {
   totalCount: number;
   page: number;
   pageSize: number;
+}
+
+export interface StockMovementQuery {
+  page: number;
+  pageSize: number;
+  productId?: number;
+  movementType?: string;
+  startDate?: string;
+  endDate?: string;
 }

@@ -20,6 +20,7 @@ import {
 } from './category-dialog/category-dialog';
 import { AssetCategory } from './asset-category.models';
 import { AssetCategoryService } from './asset-category.service';
+import { downloadCsv } from '../../shared/csv-export';
 
 @Component({
   imports: [
@@ -90,6 +91,21 @@ export class AssetCategoriesPage implements AfterViewInit {
   protected applySearch(value: string): void {
     this.dataSource.filter = value.trim().toLowerCase();
     this.dataSource.paginator?.firstPage();
+  }
+
+  protected exportCsv(): void {
+    const rows = this.dataSource.filteredData.map((category) => [
+      category.categoryId,
+      category.categoryName,
+      category.description ?? '',
+      category.isActive ? 'Active' : 'Inactive',
+      category.createdOn,
+    ]);
+    downloadCsv(
+      'asset-categories.csv',
+      ['Category ID', 'Category Name', 'Description', 'Status', 'Created On'],
+      rows,
+    );
   }
 
   protected loadCategories(): void {

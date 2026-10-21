@@ -213,6 +213,10 @@ mat-paginator {
   font-weight: 600;
 }
 
+.asset-table tr.focused-asset {
+  background: #eef1ff;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -234,6 +238,6 @@ mat-paginator {
   }
 
   .table-scroll table {
-    min-width: 950px;
+    min-width: 1120px;
   }
 }

@@ -42,4 +42,10 @@ public interface IAssetAssignmentRepository
         AssetAssignment assignment,
         bool individual,
         CancellationToken cancellationToken);
+    Task<AssetAssignment> ReturnAsync(
+        int assignmentId,
+        ReturnAssetAssignmentRequest request,
+        AssetCondition returnedCondition,
+        string? actor,
+        CancellationToken cancellationToken);
 }

@@ -1,0 +1,103 @@
+<header class="page-heading">
+  <div>
+    <p class="breadcrumb">Workspace <span>/</span> Dashboard</p>
+    <h1>Dashboard</h1>
+    <p class="page-description">A current overview of inventory and assigned assets.</p>
+  </div>
+  <a mat-flat-button color="primary" routerLink="/receive-stock">
+    <mat-icon>add</mat-icon>Receive Stock
+  </a>
+</header>
+
+@if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+@if (loadError()) {
+  <div class="load-error" role="alert">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ loadError() }}</span>
+    <button mat-button (click)="loadData()">Retry</button>
+  </div>
+}
+
+@if (!loadError()) {
+  <section class="metric-grid" aria-label="Inventory summary">
+    <article class="metric-card">
+      <span class="metric-icon available"><mat-icon>inventory_2</mat-icon></span>
+      <div><span>Available items</span><strong>{{ availableQuantity() }}</strong></div>
+      <a routerLink="/inventory" aria-label="View inventory"><mat-icon>arrow_forward</mat-icon></a>
+    </article>
+    <article class="metric-card">
+      <span class="metric-icon assigned"><mat-icon>assignment_ind</mat-icon></span>
+      <div><span>Items assigned</span><strong>{{ assignedQuantity() }}</strong></div>
+      <a routerLink="/assign-assets" aria-label="View assignments"><mat-icon>arrow_forward</mat-icon></a>
+    </article>
+    <article class="metric-card">
+      <span class="metric-icon active"><mat-icon>person_pin</mat-icon></span>
+      <div><span>Open assignments</span><strong>{{ activeAssignmentCount() }}</strong></div>
+      <a routerLink="/return-assets" aria-label="View outstanding returns"><mat-icon>arrow_forward</mat-icon></a>
+    </article>
+    <article class="metric-card">
+      <span class="metric-icon damaged"><mat-icon>report_problem</mat-icon></span>
+      <div><span>Damaged items</span><strong>{{ damagedQuantity() }}</strong></div>
+      <a routerLink="/inventory" aria-label="View damaged inventory"><mat-icon>arrow_forward</mat-icon></a>
+    </article>
+  </section>
+
+  <section class="content-grid">
+    <article class="panel">
+      <header class="panel-header">
+        <div>
+          <h2>Recent assignments</h2>
+          <p>Latest asset assignments recorded in the system.</p>
+        </div>
+        <a mat-button routerLink="/assign-assets">View assignments</a>
+      </header>
+      @if (recentAssignments().length > 0) {
+        <div class="activity-list">
+          @for (assignment of recentAssignments(); track assignment.assignmentId) {
+            <div class="activity">
+              <span class="activity-icon"><mat-icon>assignment_ind</mat-icon></span>
+              <div class="activity-details">
+                <strong>{{ assignment.employeeName }}</strong>
+                <span>{{ assignment.assignmentNumber }} · {{ assignment.issuedQuantity }} item(s)</span>
+              </div>
+              <div class="activity-meta">
+                <span class="status" [class.returned]="assignment.status === 'Returned'">
+                  {{ assignment.status }}
+                </span>
+                <time>{{ assignment.assignedDate | date: 'mediumDate' }}</time>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (!loading()) {
+        <div class="empty-state">No asset assignments have been recorded yet.</div>
+      }
+    </article>
+
+    <article class="panel low-stock-panel">
+      <header class="panel-header">
+        <div>
+          <h2>Low stock</h2>
+          <p>Products at or below their minimum stock level.</p>
+        </div>
+        <a mat-button routerLink="/inventory">Inventory</a>
+      </header>
+      @if (lowStockProducts().length > 0) {
+        <div class="low-stock-list">
+          @for (product of lowStockProducts(); track product.productId) {
+            <div class="stock-row">
+              <span class="stock-icon"><mat-icon>devices_other</mat-icon></span>
+              <div>
+                <strong>{{ product.productName }}</strong>
+                <span>{{ product.categoryName }}</span>
+              </div>
+              <span class="stock-level">{{ product.availableQuantity }} / {{ product.minimumStock }}</span>
+            </div>
+          }
+        </div>
+      } @else if (!loading()) {
+        <div class="empty-state">No products are below their minimum stock level.</div>
+      }
+    </article>
+  </section>
+}

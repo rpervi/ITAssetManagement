@@ -1,0 +1,95 @@
+<header class="page-heading">
+  <div>
+    <p class="breadcrumb">Workspace <span>/</span> Return Assets</p>
+    <h1>Return Assets</h1>
+    <p class="page-description">Record returned items and update their inventory condition.</p>
+  </div>
+</header>
+
+<section class="return-card" aria-label="Outstanding assignments">
+  <div class="table-toolbar">
+    <div>
+      <h2>Outstanding assignments</h2>
+      <p>Record full or partial returns for assets currently assigned to employees.</p>
+    </div>
+  </div>
+
+  <div class="filters">
+    <mat-form-field appearance="outline">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>Search employee, product, or asset</mat-label>
+      <input matInput #searchInput (input)="updateSearch(searchInput.value)" />
+    </mat-form-field>
+  </div>
+
+  @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (loadError()) {
+    <div class="load-error" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ loadError() }}</span>
+      <button mat-button (click)="loadData()">Retry</button>
+    </div>
+  }
+
+  <div class="assignment-list">
+    @for (assignment of assignments(); track assignment.assignmentId) {
+      <article class="assignment">
+        <header class="assignment-header">
+          <div>
+            <strong>{{ assignment.employeeName }}</strong>
+            <span>{{ assignment.employeeCode }} · {{ assignment.department }}</span>
+          </div>
+          <div class="assignment-meta">
+            <strong>{{ assignment.assignmentNumber }}</strong>
+            <span>Assigned {{ assignment.assignedDate | date: 'mediumDate' }}</span>
+          </div>
+        </header>
+        <div class="items">
+          @for (item of outstandingItems(assignment); track item.assignmentItemId) {
+            <section class="item">
+              <div class="item-details">
+                <strong>{{ item.productName }}</strong>
+                <span>{{ item.categoryName }} · {{ item.brand }} {{ item.model || '' }}</span>
+                @if (item.assetCode) {
+                  <span>{{ item.assetCode }}@if (item.serialNumber) { · {{ item.serialNumber }} }</span>
+                }
+              </div>
+              <span class="quantity">{{ item.outstandingQuantity }} outstanding / {{ item.quantity }}</span>
+              @if (canReturnAssets()) {
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  (click)="openReturnDialog(assignment, item)"
+                  [attr.aria-label]="'Record return for ' + item.productName"
+                >
+                  <mat-icon>keyboard_return</mat-icon>Return
+                </button>
+              }
+            </section>
+          }
+        </div>
+      </article>
+    } @empty {
+      @if (!loading() && !loadError()) {
+        <div class="empty-state">
+          <mat-icon>{{ searchInput.value ? 'search_off' : 'task_alt' }}</mat-icon>
+          <strong>{{ searchInput.value ? 'No matching assignments' : 'No outstanding returns' }}</strong>
+          <span>
+            {{ searchInput.value
+              ? 'Try adjusting your search.'
+              : 'All assigned items have been returned.' }}
+          </span>
+        </div>
+      }
+    }
+  </div>
+
+  <mat-paginator
+    [length]="totalCount()"
+    [pageIndex]="pageIndex()"
+    [pageSize]="pageSize()"
+    [pageSizeOptions]="[10, 25, 50, 100]"
+    (page)="changePage($event)"
+    showFirstLastButtons
+  />
+</section>

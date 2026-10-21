@@ -256,6 +256,18 @@ public sealed class StockRepository(AssetManagementDbContext dbContext) : IStock
                 Quantity = group.Sum(movement =>
                     movement.ReceiptItem == null
                     || movement.ReceiptItem.Condition != AssetCondition.Damaged
+                        && (!movement.ReferenceId.HasValue
+                            || dbContext.AssetReturns.Any(assetReturn =>
+                                assetReturn.ReturnId == movement.ReferenceId.Value
+                                && assetReturn.ReturnedCondition != AssetCondition.Damaged))
+                        ? movement.Quantity
+                        : 0),
+                TotalQuantity = group.Sum(movement => movement.Quantity),
+                Damaged = group.Sum(movement =>
+                    movement.ReferenceId.HasValue
+                    && dbContext.AssetReturns.Any(assetReturn =>
+                        assetReturn.ReturnId == movement.ReferenceId.Value
+                        && assetReturn.ReturnedCondition == AssetCondition.Damaged)
                         ? movement.Quantity
                         : 0),
             })
@@ -282,11 +294,14 @@ public sealed class StockRepository(AssetManagementDbContext dbContext) : IStock
         return productIds.Select(productId =>
         {
             var receipts = receiptBalances.SingleOrDefault(item => item.ProductId == productId);
-            var assignments = assignmentBalances.SingleOrDefault(item => item.ProductId == productId)?.Quantity ?? 0;
-            var returns = returnBalances.SingleOrDefault(item => item.ProductId == productId)?.Quantity ?? 0;
+            var totalAssignments = assignmentBalances
+                .SingleOrDefault(item => item.ProductId == productId)?.Quantity ?? 0;
+            var returns = returnBalances.SingleOrDefault(item => item.ProductId == productId);
+            var assignments = Math.Max(0, totalAssignments - (returns?.TotalQuantity ?? 0));
             var adjustments = adjustmentBalances.SingleOrDefault(item => item.ProductId == productId)?.Quantity ?? 0;
-            var available = (receipts?.Quantity ?? 0) + returns - assignments + adjustments;
-            var damaged = receipts?.Damaged ?? 0;
+            var available = (receipts?.Quantity ?? 0) + (returns?.Quantity ?? 0)
+                - totalAssignments + adjustments;
+            var damaged = (receipts?.Damaged ?? 0) + (returns?.Damaged ?? 0);
             return new StockBalanceData(productId, available, assignments, damaged, damaged);
         }).ToArray();
     }
@@ -330,6 +345,206 @@ public sealed class StockRepository(AssetManagementDbContext dbContext) : IStock
             .ToListAsync(cancellationToken);
     }
 
+    public Task<AssetUnit?> GetAssetUnitByCodeAsync(
+        string assetCode,
+        CancellationToken cancellationToken)
+    {
+        return dbContext.AssetUnits
+            .AsNoTracking()
+            .Include(unit => unit.Product)
+                .ThenInclude(product => product!.Category)
+            .Include(unit => unit.AssignmentItems)
+                .ThenInclude(item => item.Assignment)
+                    .ThenInclude(assignment => assignment!.Employee)
+            .Include(unit => unit.AssignmentItems)
+                .ThenInclude(item => item.Returns)
+            .SingleOrDefaultAsync(unit => unit.AssetCode == assetCode, cancellationToken);
+    }
+
+    public async Task<int> ConvertBulkStockToIndividualAsync(
+        int productId,
+        string? actor,
+        CancellationToken cancellationToken)
+    {
+        await using IDbContextTransaction? transaction =
+                dbContext.Database.CurrentTransaction is null
+                    ? await dbContext.Database.BeginTransactionAsync(
+                        IsolationLevel.Serializable, cancellationToken)
+                    : null;
+        var product = await dbContext.AssetProducts
+                .SingleOrDefaultAsync(item => item.ProductId == productId, cancellationToken);
+        if (product is null)
+        {
+            throw new BulkStockConversionException("The selected product does not exist.");
+        }
+
+        if (product.TrackingType != TrackingType.Bulk)
+        {
+            throw new BulkStockConversionException(
+                "This product is already tracked as individual assets.");
+        }
+
+        var balance = await GetBulkBalanceAsync(productId, cancellationToken);
+        if (balance is null || balance.AvailableQuantity <= 0)
+        {
+            throw new BulkStockConversionException(
+                "There is no available bulk stock to convert into individually barcoded assets.");
+        }
+
+        if (balance.AssignedQuantity > 0)
+        {
+            throw new BulkStockConversionException(
+                "Return all assigned bulk stock before converting this product to individual assets.");
+        }
+
+        if (balance.UnavailableQuantity > 0 || balance.DamagedQuantity > 0)
+        {
+            throw new BulkStockConversionException(
+                "Resolve damaged or unavailable bulk stock before converting this product.");
+        }
+
+        if (await dbContext.AssetUnits.AnyAsync(
+                    unit => unit.ProductId == productId, cancellationToken))
+        {
+            throw new BulkStockConversionException(
+                "This bulk product already has asset-unit records and cannot be converted safely.");
+        }
+
+        var receiptMovements = await dbContext.StockMovements
+                .Where(movement => movement.ProductId == productId
+                    && movement.MovementType == MovementType.Receipt
+                    && movement.ReceiptItemId.HasValue)
+                .GroupBy(movement => movement.ReceiptItemId!.Value)
+                .Select(group => new
+                {
+                    ReceiptItemId = group.Key,
+                    Quantity = group.Sum(movement => movement.Quantity),
+                })
+                .ToListAsync(cancellationToken);
+        var assignmentMovements = await dbContext.StockMovements
+                .Where(movement => movement.ProductId == productId
+                    && movement.MovementType == MovementType.Assignment
+                    && movement.ReceiptItemId.HasValue)
+                .GroupBy(movement => movement.ReceiptItemId!.Value)
+                .Select(group => new
+                {
+                    ReceiptItemId = group.Key,
+                    Quantity = group.Sum(movement => movement.Quantity),
+                })
+                .ToListAsync(cancellationToken);
+        var returnMovements = await dbContext.StockMovements
+                .Where(movement => movement.ProductId == productId
+                    && movement.MovementType == MovementType.Return
+                    && movement.ReceiptItemId.HasValue
+                    && movement.ReceiptItem!.Condition != AssetCondition.Damaged
+                    && (!movement.ReferenceId.HasValue
+                        || dbContext.AssetReturns.Any(assetReturn =>
+                            assetReturn.ReturnId == movement.ReferenceId.Value
+                            && assetReturn.ReturnedCondition != AssetCondition.Damaged)))
+                .GroupBy(movement => movement.ReceiptItemId!.Value)
+                .Select(group => new
+                {
+                    ReceiptItemId = group.Key,
+                    Quantity = group.Sum(movement => movement.Quantity),
+                })
+                .ToListAsync(cancellationToken);
+
+        var assignmentQuantities = assignmentMovements.ToDictionary(
+                movement => movement.ReceiptItemId, movement => movement.Quantity);
+        var returnQuantities = returnMovements.ToDictionary(
+                movement => movement.ReceiptItemId, movement => movement.Quantity);
+        var receiptItemIds = receiptMovements
+                .Select(movement => movement.ReceiptItemId)
+                .ToArray();
+        var receiptItems = await dbContext.StockReceiptItems
+                .Include(item => item.Receipt)
+                .Where(item => receiptItemIds.Contains(item.ReceiptItemId)
+                    && item.Condition != AssetCondition.Damaged)
+                .ToListAsync(cancellationToken);
+        var batches = receiptItems
+                .Select(item =>
+                {
+                    var received = receiptMovements.Single(movement =>
+                        movement.ReceiptItemId == item.ReceiptItemId).Quantity;
+                    var assigned = assignmentQuantities.GetValueOrDefault(item.ReceiptItemId);
+                    var returned = returnQuantities.GetValueOrDefault(item.ReceiptItemId);
+                    return new
+                    {
+                        Item = item,
+                        AvailableQuantity = received + returned - assigned,
+                    };
+                })
+                .Where(batch => batch.AvailableQuantity > 0)
+                .OrderBy(batch => batch.Item.Receipt!.ReceivedDate)
+                .ThenBy(batch => batch.Item.ReceiptItemId)
+                .ToArray();
+        if (batches.Sum(batch => batch.AvailableQuantity) != balance.AvailableQuantity)
+        {
+            throw new BulkStockConversionException(
+                "Available stock does not match its receipt history. Reconcile stock adjustments before conversion.");
+        }
+
+        var normalizedActor = string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim();
+        if (normalizedActor.Length > 100)
+        {
+            normalizedActor = normalizedActor[..100];
+        }
+
+        var units = new List<(AssetUnit Unit, StockReceiptItem ReceiptItem, DateTime ReceivedDate)>(
+                balance.AvailableQuantity);
+        foreach (var batch in batches)
+        {
+            for (var i = 0; i < batch.AvailableQuantity; i++)
+            {
+                var unit = new AssetUnit
+                {
+                    ProductId = productId,
+                    Product = product,
+                    AssetCode = $"PENDING-{Guid.NewGuid():N}",
+                    PurchaseDate = DateTime.SpecifyKind(batch.Item.PurchaseDate.Date, DateTimeKind.Utc),
+                    WarrantyExpiryDate = batch.Item.WarrantyExpiryDate.HasValue
+                        ? DateTime.SpecifyKind(batch.Item.WarrantyExpiryDate.Value.Date, DateTimeKind.Utc)
+                        : null,
+                    PurchaseCost = batch.Item.UnitPrice,
+                    Status = AssetStatus.Available,
+                    Condition = batch.Item.Condition,
+                    CreatedBy = normalizedActor,
+                };
+                dbContext.AssetUnits.Add(unit);
+                units.Add((unit, batch.Item, batch.Item.Receipt!.ReceivedDate));
+            }
+        }
+
+        product.TrackingType = TrackingType.Individual;
+        product.ModifiedBy = normalizedActor;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (var (unit, receiptItem, receivedDate) in units)
+        {
+            unit.AssetCode = $"AST-{unit.AssetUnitId:D6}";
+            dbContext.StockMovements.Add(new StockMovement
+            {
+                ProductId = productId,
+                ReceiptItemId = receiptItem.ReceiptItemId,
+                AssetUnitId = unit.AssetUnitId,
+                MovementType = MovementType.Adjustment,
+                Quantity = 1,
+                MovementDate = DateTime.SpecifyKind(receivedDate, DateTimeKind.Utc),
+                ReferenceId = receiptItem.ReceiptId,
+                Remarks = StockMovement.BulkTrackingConversionRemarks,
+                CreatedBy = normalizedActor,
+            });
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+
+        return units.Count;
+    }
+
     public async Task<(IReadOnlyList<StockMovement> Movements, int TotalCount)> GetMovementsAsync(
         StockMovementFilter filter,
         CancellationToken cancellationToken)
@@ -342,6 +557,23 @@ public sealed class StockRepository(AssetManagementDbContext dbContext) : IStock
         if (filter.ProductId.HasValue)
         {
             query = query.Where(movement => movement.ProductId == filter.ProductId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.MovementType)
+            && Enum.TryParse<MovementType>(filter.MovementType, true, out var movementType))
+        {
+            query = query.Where(movement => movement.MovementType == movementType);
+        }
+
+        if (filter.StartDate.HasValue)
+        {
+            query = query.Where(movement => movement.MovementDate >= filter.StartDate.Value);
+        }
+
+        if (filter.EndDate.HasValue)
+        {
+            query = query.Where(movement =>
+                movement.MovementDate < filter.EndDate.Value.AddDays(1));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

@@ -1,0 +1,73 @@
+<header class="dialog-heading">
+  <div>
+    <p class="eyebrow">ASSET RETURN</p>
+    <h2 mat-dialog-title>Record Return</h2>
+  </div>
+  <button mat-icon-button mat-dialog-close aria-label="Close dialog">
+    <mat-icon>close</mat-icon>
+  </button>
+</header>
+
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <mat-dialog-content>
+    <p class="dialog-description">
+      Return <strong>{{ data.item.productName }}</strong> assigned to
+      {{ data.assignment.employeeName }}.
+    </p>
+    @if (data.item.assetCode) {
+      <p class="asset-code">{{ data.item.assetCode }}@if (data.item.serialNumber) { · {{ data.item.serialNumber }} }</p>
+    }
+    <p class="outstanding">{{ data.item.outstandingQuantity }} unit(s) outstanding</p>
+
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Quantity to return</mat-label>
+        <input
+          matInput
+          type="number"
+          min="1"
+          [max]="data.item.outstandingQuantity"
+          formControlName="quantity"
+        />
+        @if (form.controls.quantity.touched && form.controls.quantity.invalid) {
+          <mat-error>Enter 1 to {{ data.item.outstandingQuantity }}.</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Return date</mat-label>
+        <input matInput type="date" formControlName="returnDate" />
+        @if (form.controls.returnDate.touched && form.controls.returnDate.invalid) {
+          <mat-error>Return date is required.</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Returned condition</mat-label>
+        <mat-select formControlName="returnedCondition">
+          <mat-option value="New">New</mat-option>
+          <mat-option value="Good">Good</mat-option>
+          <mat-option value="Fair">Fair</mat-option>
+          <mat-option value="Poor">Poor</mat-option>
+          <mat-option value="Damaged">Damaged</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Remarks</mat-label>
+        <textarea matInput rows="2" formControlName="remarks"></textarea>
+        @if (form.controls.remarks.touched && form.controls.remarks.invalid) {
+          <mat-error>Remarks must be 1000 characters or fewer.</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    @if (errorMessage()) {
+      <p class="form-error" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage() }}</p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close [disabled]="submitting()">Cancel</button>
+    <button mat-flat-button color="primary" type="submit" [disabled]="submitting()">
+      @if (submitting()) { <mat-icon class="spin">autorenew</mat-icon> }
+      {{ submitting() ? 'Recording…' : 'Record Return' }}
+    </button>
+  </mat-dialog-actions>
+</form>

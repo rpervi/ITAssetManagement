@@ -1,0 +1,122 @@
+:host {
+  display: block;
+}
+
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px 0;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  color: #ed7d22;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+h2[mat-dialog-title] {
+  margin: 0;
+  padding: 0;
+  color: #202944;
+  font-size: 21px;
+  font-weight: 650;
+}
+
+mat-dialog-content {
+  max-height: min(68vh, 680px);
+  padding: 12px 24px 20px;
+}
+
+.dialog-description {
+  margin: 0 0 5px;
+  color: #858c9d;
+  font-size: 12px;
+}
+
+.asset-code,
+.outstanding {
+  margin: 5px 0;
+  color: #606a80;
+  font-size: 11px;
+}
+
+.outstanding {
+  margin-bottom: 16px;
+  color: #27865e;
+  font-weight: 600;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.form-grid mat-form-field {
+  width: 100%;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 7px;
+  color: #b42318;
+  background: #fff1f0;
+  font-size: 12px;
+}
+
+.form-error mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+mat-dialog-actions {
+  padding: 10px 24px 18px;
+  gap: 8px;
+}
+
+mat-dialog-actions button[mat-flat-button] {
+  border-radius: 7px;
+  background: #ed7d22;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .dialog-heading {
+    padding: 16px 16px 0;
+  }
+
+  mat-dialog-content {
+    padding: 10px 16px 16px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .full-width {
+    grid-column: auto;
+  }
+
+  mat-dialog-actions {
+    padding: 8px 16px 14px;
+  }
+}

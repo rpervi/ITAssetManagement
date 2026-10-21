@@ -5,3 +5,5 @@ public sealed class InvalidStockRequestException(string message) : Exception(mes
 public sealed class DuplicateStockIdentifierException(string message) : Exception(message);
 
 public sealed class StockIdempotencyConflictException(string message) : Exception(message);
+
+public sealed class BulkStockConversionException(string message) : Exception(message);

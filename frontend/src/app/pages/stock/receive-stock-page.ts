@@ -69,6 +69,7 @@ export class ReceiveStockPage {
   });
 
   constructor() {
+    this.configureMode(this.mode());
     this.loadProducts();
   }
 
@@ -85,6 +86,7 @@ export class ReceiveStockPage {
     this.selectedProduct.set(null);
     this.form.controls.productId.setValue(0);
     this.form.controls.productId.markAsPristine();
+    this.configureMode(mode);
   }
 
   protected selectProduct(productId: number): void {
@@ -92,6 +94,7 @@ export class ReceiveStockPage {
     this.selectedProduct.set(product);
     if (product) {
       this.mode.set(product.trackingType);
+      this.configureMode(product.trackingType);
     }
   }
 
@@ -196,6 +199,25 @@ export class ReceiveStockPage {
       purchaseCost: [0, [Validators.required, Validators.min(0)]],
       condition: ['Good', [Validators.required]],
     });
+  }
+
+  private configureMode(mode: StockMode): void {
+    const bulkControls = [
+      this.form.controls.quantity,
+      this.form.controls.unitPrice,
+      this.form.controls.purchaseDate,
+      this.form.controls.warrantyExpiryDate,
+      this.form.controls.condition,
+    ];
+
+    if (mode === 'Individual') {
+      this.assetRows.enable({ emitEvent: false });
+      bulkControls.forEach((control) => control.disable({ emitEvent: false }));
+      return;
+    }
+
+    this.assetRows.disable({ emitEvent: false });
+    bulkControls.forEach((control) => control.enable({ emitEvent: false }));
   }
 
   private validateDates(): boolean {

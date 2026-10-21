@@ -132,6 +132,41 @@ public sealed class AssetAssignmentSqlIntegrationTests
                 .GetAvailableBatchesAsync(bulkProduct.ProductId, CancellationToken.None);
             Assert.Equal(3, availableBatches.Sum(batch => batch.AvailableQuantity));
 
+            var bulkItemId = bulkResult.Assignment.Items.Single().AssignmentItemId;
+            var bulkGoodReturn = await service.ReturnAsync(
+                bulkResult.Assignment.AssignmentId,
+                new ReturnAssetAssignmentRequest(
+                    bulkItemId,
+                    1,
+                    new DateTime(2026, 10, 21),
+                    "Good",
+                    "Returned in good condition"),
+                "integration-test",
+                CancellationToken.None);
+            Assert.Equal(3, bulkGoodReturn.Items.Single().OutstandingQuantity);
+            var bulkDamagedReturn = await service.ReturnAsync(
+                bulkResult.Assignment.AssignmentId,
+                new ReturnAssetAssignmentRequest(
+                    bulkItemId,
+                    1,
+                    new DateTime(2026, 10, 21),
+                    "Damaged",
+                    "Returned damaged"),
+                "integration-test",
+                CancellationToken.None);
+            Assert.Equal(2, bulkDamagedReturn.Items.Single().OutstandingQuantity);
+            var bulkAvailability = await stockService.GetAvailabilityAsync(
+                bulkProduct.ProductId,
+                CancellationToken.None);
+            Assert.Equal(4, bulkAvailability!.AvailableQuantity);
+            Assert.Equal(2, bulkAvailability.AssignedQuantity);
+            Assert.Equal(1, bulkAvailability.DamagedQuantity);
+            Assert.Equal(
+                4,
+                (await new AssetAssignmentRepository(context)
+                    .GetAvailableBatchesAsync(bulkProduct.ProductId, CancellationToken.None))
+                    .Sum(batch => batch.AvailableQuantity));
+
             var unitIds = await context.AssetUnits
                 .Where(unit => unit.ProductId == individualProduct.ProductId)
                 .OrderBy(unit => unit.AssetUnitId)
@@ -160,6 +195,23 @@ public sealed class AssetAssignmentSqlIntegrationTests
                 await context.StockMovements.CountAsync(movement =>
                     movement.AssetUnitId == unitIds[0]
                     && movement.MovementType == MovementType.Assignment));
+            var individualItemId = individualResult.Assignment.Items.Single().AssignmentItemId;
+            var returnedIndividual = await service.ReturnAsync(
+                individualResult.Assignment.AssignmentId,
+                new ReturnAssetAssignmentRequest(
+                    individualItemId,
+                    1,
+                    new DateTime(2026, 10, 21),
+                    "Damaged",
+                    "Returned with a damaged screen"),
+                "integration-test",
+                CancellationToken.None);
+            Assert.Equal("Returned", returnedIndividual.Status);
+            Assert.Equal(
+                AssetStatus.UnderRepair,
+                await context.AssetUnits.Where(unit => unit.AssetUnitId == unitIds[0])
+                    .Select(unit => unit.Status)
+                    .SingleAsync());
         }
         finally
         {

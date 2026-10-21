@@ -1,0 +1,157 @@
+<header class="page-heading">
+  <div>
+    <p class="breadcrumb">Workspace <span>/</span> Reports</p>
+    <h1>Reports</h1>
+    <p class="page-description">Review inventory balances and assignment return status.</p>
+  </div>
+</header>
+
+<section class="report-section">
+  <header class="section-heading">
+    <div>
+      <h2>Inventory summary</h2>
+      <p>Current stock quantities by product and tracking type.</p>
+    </div>
+    <button
+      mat-stroked-button
+      (click)="exportInventoryCsv()"
+      [disabled]="inventoryLoading() || inventory().length === 0"
+    ><mat-icon>download</mat-icon>Export CSV</button>
+  </header>
+
+  @if (inventoryLoading()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (inventoryError()) {
+    <div class="inline-error" role="alert">
+      <mat-icon>error_outline</mat-icon><span>{{ inventoryError() }}</span>
+      <button mat-button (click)="loadInventory()">Retry</button>
+    </div>
+  }
+  @if (!inventoryError()) {
+    <div class="summary-grid">
+      <div><span>Products</span><strong>{{ inventory().length }}</strong></div>
+      <div><span>Available units</span><strong>{{ availableTotal() }}</strong></div>
+      <div><span>Assigned units</span><strong>{{ assignedTotal() }}</strong></div>
+      <div><span>Total accounted units</span><strong>{{ inventoryValue() }}</strong></div>
+    </div>
+    <div class="table-scroll">
+      <table mat-table [dataSource]="inventory()">
+        <ng-container matColumnDef="productName">
+          <th mat-header-cell *matHeaderCellDef>Product</th>
+          <td mat-cell *matCellDef="let product"><strong>{{ product.productName }}</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="categoryName">
+          <th mat-header-cell *matHeaderCellDef>Category</th>
+          <td mat-cell *matCellDef="let product">{{ product.categoryName }}</td>
+        </ng-container>
+        <ng-container matColumnDef="trackingType">
+          <th mat-header-cell *matHeaderCellDef>Tracking</th>
+          <td mat-cell *matCellDef="let product">{{ product.trackingType }}</td>
+        </ng-container>
+        <ng-container matColumnDef="availableQuantity">
+          <th mat-header-cell *matHeaderCellDef>Available</th>
+          <td mat-cell *matCellDef="let product">{{ product.availableQuantity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="assignedQuantity">
+          <th mat-header-cell *matHeaderCellDef>Assigned</th>
+          <td mat-cell *matCellDef="let product">{{ product.assignedQuantity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="unavailableQuantity">
+          <th mat-header-cell *matHeaderCellDef>Unavailable</th>
+          <td mat-cell *matCellDef="let product">{{ product.unavailableQuantity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="damagedQuantity">
+          <th mat-header-cell *matHeaderCellDef>Damaged</th>
+          <td mat-cell *matCellDef="let product">{{ product.damagedQuantity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="minimumStock">
+          <th mat-header-cell *matHeaderCellDef>Minimum</th>
+          <td mat-cell *matCellDef="let product">{{ product.minimumStock }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="['productName', 'categoryName', 'trackingType', 'availableQuantity', 'assignedQuantity', 'unavailableQuantity', 'damagedQuantity', 'minimumStock']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['productName', 'categoryName', 'trackingType', 'availableQuantity', 'assignedQuantity', 'unavailableQuantity', 'damagedQuantity', 'minimumStock']"></tr>
+        <tr class="mat-row empty-row" *matNoDataRow>
+          <td class="mat-cell" colspan="8">@if (!inventoryLoading()) { <div class="empty-state">No inventory data is available.</div> }</td>
+        </tr>
+      </table>
+    </div>
+  }
+</section>
+
+<section class="report-section">
+  <header class="section-heading assignment-heading">
+    <div>
+      <h2>Assignment report</h2>
+      <p>{{ assignmentCount() }} assignment(s) in the selected period.</p>
+    </div>
+    <button
+      mat-stroked-button
+      (click)="exportAssignmentsCsv()"
+      [disabled]="assignmentLoading() || assignmentRows().length === 0"
+    ><mat-icon>download</mat-icon>Export CSV</button>
+  </header>
+  <div class="date-filters">
+    <mat-form-field appearance="outline">
+      <mat-label>Assigned from</mat-label>
+      <input matInput type="date" [value]="startDate()" #fromDate />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Assigned to</mat-label>
+      <input matInput type="date" [value]="endDate()" #toDate />
+    </mat-form-field>
+    <button
+      mat-flat-button
+      color="primary"
+      (click)="updateDateRange(fromDate.value, toDate.value)"
+      [disabled]="assignmentLoading()"
+    >Apply dates</button>
+    <button
+      mat-button
+      (click)="fromDate.value = ''; toDate.value = ''; updateDateRange('', '')"
+      [disabled]="assignmentLoading()"
+    >Clear</button>
+  </div>
+  @if (assignmentLoading()) { <mat-progress-bar mode="indeterminate" /> }
+  @if (assignmentError()) {
+    <div class="inline-error" role="alert">
+      <mat-icon>error_outline</mat-icon><span>{{ assignmentError() }}</span>
+      <button mat-button (click)="loadAssignments()">Retry</button>
+    </div>
+  }
+  @if (!assignmentError()) {
+    <div class="summary-grid assignment-summary">
+      <div><span>Assignments</span><strong>{{ assignmentCount() }}</strong></div>
+      <div><span>Items issued</span><strong>{{ issuedTotal() }}</strong></div>
+      <div><span>Items returned</span><strong>{{ returnedTotal() }}</strong></div>
+      <div><span>Items outstanding</span><strong>{{ outstandingTotal() }}</strong></div>
+    </div>
+    <div class="table-scroll">
+      <table mat-table [dataSource]="assignmentRows()">
+        <ng-container matColumnDef="assignmentNumber">
+          <th mat-header-cell *matHeaderCellDef>Assignment</th>
+          <td mat-cell *matCellDef="let assignment"><strong>{{ assignment.assignmentNumber }}</strong></td>
+        </ng-container>
+        <ng-container matColumnDef="assignedDate">
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let assignment">{{ assignment.assignedDate | date: 'mediumDate' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="employeeName">
+          <th mat-header-cell *matHeaderCellDef>Employee</th>
+          <td mat-cell *matCellDef="let assignment">{{ assignment.employeeName }}</td>
+        </ng-container>
+        <ng-container matColumnDef="issuedQuantity">
+          <th mat-header-cell *matHeaderCellDef>Issued</th>
+          <td mat-cell *matCellDef="let assignment">{{ assignment.issuedQuantity }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let assignment">{{ assignment.status }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="['assignmentNumber', 'assignedDate', 'employeeName', 'issuedQuantity', 'status']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['assignmentNumber', 'assignedDate', 'employeeName', 'issuedQuantity', 'status']"></tr>
+        <tr class="mat-row empty-row" *matNoDataRow>
+          <td class="mat-cell" colspan="5">@if (!assignmentLoading()) { <div class="empty-state">No assignments match this date range.</div> }</td>
+        </tr>
+      </table>
+    </div>
+  }
+</section>

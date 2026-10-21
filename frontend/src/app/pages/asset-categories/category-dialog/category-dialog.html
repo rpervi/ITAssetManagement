@@ -8,8 +8,8 @@
 </header>
 
 <mat-dialog-content>
-  @if (errorMessage) {
-    <div class="form-error" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage }}</div>
+  @if (errorMessage()) {
+    <div class="form-error" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage() }}</div>
   }
 
   <form [formGroup]="form" id="category-form" (ngSubmit)="submit()" novalidate>
@@ -46,8 +46,8 @@
 <mat-dialog-actions align="end">
   <button mat-button type="button" mat-dialog-close>{{ isView ? 'Close' : 'Cancel' }}</button>
   @if (!isView) {
-    <button mat-flat-button color="primary" type="submit" form="category-form" [disabled]="submitting">
-      @if (submitting) {
+    <button mat-flat-button color="primary" type="submit" form="category-form" [disabled]="submitting()">
+      @if (submitting()) {
         <mat-spinner diameter="18" />
       } @else {
         {{ isEdit ? 'Save changes' : 'Create category' }}

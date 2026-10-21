@@ -129,6 +129,156 @@ public sealed class StockServiceTests
         Assert.Empty(repository.Receipts);
     }
 
+    [Fact]
+    public async Task GetMovementsAsync_PassesValidatedFiltersToRepository()
+    {
+        var (service, repository, product) = CreateService(TrackingType.Bulk);
+
+        var response = await service.GetMovementsAsync(
+            product.ProductId,
+            " return ",
+            new DateTime(2026, 10, 1),
+            new DateTime(2026, 10, 31),
+            2,
+            25,
+            CancellationToken.None);
+
+        Assert.Empty(response.Items);
+        Assert.Equal(new StockMovementFilter(
+            product.ProductId,
+            "Return",
+            new DateTime(2026, 10, 1),
+            new DateTime(2026, 10, 31),
+            2,
+            25), repository.LastMovementFilter);
+    }
+
+    [Fact]
+    public async Task GetMovementsAsync_RejectsInvalidMovementTypeAndDateRange()
+    {
+        var (service, repository, product) = CreateService(TrackingType.Bulk);
+
+        await Assert.ThrowsAsync<InvalidStockRequestException>(() =>
+            service.GetMovementsAsync(
+                product.ProductId, "99", null, null, 1, 25, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidStockRequestException>(() =>
+            service.GetMovementsAsync(
+                product.ProductId,
+                null,
+                new DateTime(2026, 10, 31),
+                new DateTime(2026, 10, 1),
+                1,
+                25,
+                CancellationToken.None));
+
+        Assert.Null(repository.LastMovementFilter);
+    }
+
+    [Fact]
+    public async Task GetAssetByCodeAsync_ReturnsAssetAndCurrentAssignmentDetails()
+    {
+        var (service, repository, product) = CreateService(TrackingType.Individual);
+        repository.BarcodeAsset = new AssetUnit
+        {
+            AssetUnitId = 17,
+            ProductId = product.ProductId,
+            AssetCode = "AST-000017",
+            SerialNumber = "SERIAL-17",
+            PurchaseDate = new DateTime(2026, 1, 10),
+            Status = AssetStatus.Assigned,
+            Condition = AssetCondition.Good,
+            Product = product,
+            AssignmentItems =
+            [
+                new AssetAssignmentItem
+                {
+                    Quantity = 1,
+                    Assignment = new AssetAssignment
+                    {
+                        AssignmentId = 3,
+                        AssignedDate = new DateTime(2026, 2, 1),
+                        AssignedBy = "it-staff",
+                        Employee = new Employee
+                        {
+                            EmployeeCode = "E-17",
+                            EmployeeName = "Test Employee",
+                            Email = "employee@example.test",
+                            Department = "IT",
+                            Location = "Building A",
+                        },
+                    },
+                },
+            ],
+        };
+
+        var result = await service.GetAssetByCodeAsync(
+            " AST-000017 ", CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(17, result.AssetUnitId);
+        Assert.Equal(product.ProductId, result.ProductId);
+        Assert.Equal("AST-000017", result.AssetCode);
+        Assert.Equal("Laptop", result.AssetName);
+        Assert.Equal("Hardware", result.CategoryName);
+        Assert.Equal("Acme", result.Manufacturer);
+        Assert.Equal("Test Employee", result.AssignedEmployee);
+        Assert.Equal("IT", result.Department);
+        Assert.Equal("Building A", result.CurrentLocation);
+        Assert.Equal("Assigned", result.Status);
+        Assert.Equal("AST-000017", repository.LastAssetCodeLookup);
+    }
+
+    [Fact]
+    public async Task GetAssetByCodeAsync_ReturnsNullWhenAssetDoesNotExist()
+    {
+        var (service, repository, _) = CreateService(TrackingType.Individual);
+
+        var result = await service.GetAssetByCodeAsync("AST-404", CancellationToken.None);
+
+        Assert.Null(result);
+        Assert.Equal("AST-404", repository.LastAssetCodeLookup);
+    }
+
+    [Fact]
+    public async Task ConvertBulkStockToIndividualAsyncReturnsCreatedAssetCount()
+    {
+        var (service, repository, product) = CreateService(TrackingType.Bulk);
+        repository.ConvertedAssetCount = 10;
+
+        var result = await service.ConvertBulkStockToIndividualAsync(
+            product.ProductId, "it-staff", CancellationToken.None);
+
+        Assert.Equal(product.ProductId, result.ProductId);
+        Assert.Equal(10, result.AssetsCreated);
+        Assert.Equal(product.ProductId, repository.LastConvertedProductId);
+        Assert.Equal("it-staff", repository.LastConversionActor);
+    }
+
+    [Fact]
+    public async Task ConvertBulkStockToIndividualAsyncRejectsInvalidProductId()
+    {
+        var (service, repository, _) = CreateService(TrackingType.Bulk);
+
+        await Assert.ThrowsAsync<InvalidStockRequestException>(() =>
+            service.ConvertBulkStockToIndividualAsync(0, "it-staff", CancellationToken.None));
+
+        Assert.Null(repository.LastConvertedProductId);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901")]
+    public async Task GetAssetByCodeAsync_RejectsInvalidBarcode(string assetCode)
+    {
+        var (service, repository, _) = CreateService(TrackingType.Individual);
+
+        await Assert.ThrowsAsync<InvalidStockRequestException>(() =>
+            service.GetAssetByCodeAsync(assetCode, CancellationToken.None));
+
+        Assert.Null(repository.LastAssetCodeLookup);
+    }
+
     [Theory]
     [InlineData(TrackingType.Bulk, "individual")]
     [InlineData(TrackingType.Individual, "bulk")]
@@ -279,6 +429,13 @@ public sealed class StockServiceTests
 
     private sealed class FakeStockRepository(AssetProduct product) : IStockRepository
     {
+        public StockMovementFilter? LastMovementFilter { get; private set; }
+        public AssetUnit? BarcodeAsset { get; set; }
+        public string? LastAssetCodeLookup { get; private set; }
+        public int ConvertedAssetCount { get; set; }
+        public int? LastConvertedProductId { get; private set; }
+        public string? LastConversionActor { get; private set; }
+
         private int nextReceiptId = 1;
         private int nextItemId = 1;
         private int nextUnitId = 1;
@@ -395,10 +552,30 @@ public sealed class StockServiceTests
                     .ToArray());
         }
 
+        public Task<AssetUnit?> GetAssetUnitByCodeAsync(
+            string assetCode,
+            CancellationToken cancellationToken)
+        {
+            LastAssetCodeLookup = assetCode;
+            return Task.FromResult(
+                BarcodeAsset?.AssetCode == assetCode ? BarcodeAsset : null);
+        }
+
+        public Task<int> ConvertBulkStockToIndividualAsync(
+            int productId,
+            string? actor,
+            CancellationToken cancellationToken)
+        {
+            LastConvertedProductId = productId;
+            LastConversionActor = actor;
+            return Task.FromResult(ConvertedAssetCount);
+        }
+
         public Task<(IReadOnlyList<StockMovement> Movements, int TotalCount)> GetMovementsAsync(
             StockMovementFilter filter,
             CancellationToken cancellationToken)
         {
+            LastMovementFilter = filter;
             return Task.FromResult(((IReadOnlyList<StockMovement>)[], 0));
         }
     }

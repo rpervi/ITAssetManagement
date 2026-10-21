@@ -2,6 +2,9 @@ namespace ITAssetManagement.Domain.Entities;
 
 public sealed class StockMovement : AuditableEntity
 {
+    public const string BulkTrackingConversionRemarks =
+        "Bulk stock converted to individual asset tracking.";
+
     public int MovementId { get; set; }
     public int ProductId { get; set; }
     public int? ReceiptItemId { get; set; }

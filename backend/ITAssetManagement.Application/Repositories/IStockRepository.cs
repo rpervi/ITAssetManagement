@@ -29,6 +29,13 @@ public interface IStockRepository
     Task<IReadOnlyList<AssetUnit>> GetProductUnitsAsync(
         int productId,
         CancellationToken cancellationToken);
+    Task<AssetUnit?> GetAssetUnitByCodeAsync(
+        string assetCode,
+        CancellationToken cancellationToken);
+    Task<int> ConvertBulkStockToIndividualAsync(
+        int productId,
+        string? actor,
+        CancellationToken cancellationToken);
     Task<(IReadOnlyList<StockMovement> Movements, int TotalCount)> GetMovementsAsync(
         StockMovementFilter filter,
         CancellationToken cancellationToken);

@@ -17,7 +17,8 @@ public sealed class AssetAssignmentServiceImpl(IAssetAssignmentRepository reposi
         int pageSize,
         string? sortBy,
         string? sortDirection,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool returnableOnly = false)
     {
         if (page < 1 || pageSize is < 1 or > 100)
         {
@@ -44,7 +45,8 @@ public sealed class AssetAssignmentServiceImpl(IAssetAssignmentRepository reposi
             page,
             pageSize,
             NormalizeSortBy(sortBy),
-            string.Equals(sortDirection?.Trim(), "desc", StringComparison.OrdinalIgnoreCase));
+            string.Equals(sortDirection?.Trim(), "desc", StringComparison.OrdinalIgnoreCase),
+            returnableOnly);
         var result = await repository.GetPageAsync(filter, cancellationToken);
         return new AssetAssignmentPageResponse(
             result.Items.Select(ToResponse).ToArray(),
@@ -229,6 +231,43 @@ public sealed class AssetAssignmentServiceImpl(IAssetAssignmentRepository reposi
             individual,
             cancellationToken);
         return new AssetAssignmentSaveResult(ToResponse(saved), created);
+    }
+
+    public async Task<AssetAssignmentResponse> ReturnAsync(
+        int assignmentId,
+        ReturnAssetAssignmentRequest request,
+        string? actor,
+        CancellationToken cancellationToken)
+    {
+        ValidateId(assignmentId);
+        ValidateId(request.AssignmentItemId);
+        if (request.Quantity < 1)
+        {
+            throw new InvalidAssetAssignmentException("Return quantity must be positive.");
+        }
+
+        if (request.ReturnDate == default)
+        {
+            throw new InvalidAssetAssignmentException("Return date is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ReturnedCondition)
+            || !Enum.TryParse<AssetCondition>(
+                request.ReturnedCondition.Trim(),
+                ignoreCase: true,
+                out var returnedCondition)
+            || !Enum.IsDefined(returnedCondition))
+        {
+            throw new InvalidAssetAssignmentException("Select a valid returned condition.");
+        }
+
+        var assignment = await repository.ReturnAsync(
+            assignmentId,
+            request with { ReturnedCondition = returnedCondition.ToString() },
+            returnedCondition,
+            actor,
+            cancellationToken);
+        return ToResponse(assignment);
     }
 
     private static AssetAssignmentResponse ToResponse(AssetAssignment assignment)

@@ -9,6 +9,7 @@ import {
   AvailableAssignmentStock,
   AvailableAssignmentUnit,
   CreateAssignmentRequest,
+  ReturnAssignmentRequest,
 } from './assignment.models';
 
 @Injectable({ providedIn: 'root' })
@@ -25,6 +26,9 @@ export class AssignmentService {
     if (query.productId) params = params.set('productId', query.productId);
     if (query.sortBy) params = params.set('sortBy', query.sortBy);
     if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
+    if (query.returnableOnly) params = params.set('returnableOnly', true);
+    if (query.startDate) params = params.set('startDate', query.startDate);
+    if (query.endDate) params = params.set('endDate', query.endDate);
     return this.http.get<AssignmentPage>(this.endpoint, {
       params,
       withCredentials: true,
@@ -61,5 +65,16 @@ export class AssignmentService {
     return this.http.post<AssetAssignment>(this.endpoint, request, {
       withCredentials: true,
     });
+  }
+
+  returnAssets(
+    assignmentId: number,
+    request: ReturnAssignmentRequest,
+  ): Observable<AssetAssignment> {
+    return this.http.post<AssetAssignment>(
+      `${this.endpoint}/${assignmentId}/returns`,
+      request,
+      { withCredentials: true },
+    );
   }
 }

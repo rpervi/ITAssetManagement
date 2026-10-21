@@ -6,10 +6,321 @@ body {
 }
 
 body {
-  color: #28314c;
+  color: var(--af-text);
   font-family: Roboto, "Segoe UI", sans-serif;
+}
+
+:root {
+  --af-sidebar: #2e3b38;
+  --af-primary: #e65c16;
+  --af-primary-hover: #c94d10;
+  --af-background: #f3f5f6;
+  --af-surface: #fff;
+  --af-table-header: #f0f2f2;
+  --af-border: #dfe4e2;
+  --af-text: #303a36;
+  --af-muted: #77817d;
+  --af-link: #2473a6;
 }
 
 * {
   box-sizing: border-box;
+}
+
+.app-shell .sidebar a[mat-list-item] .mdc-list-item__primary-text {
+  color: #f4f7f5;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.app-shell .sidebar a[mat-list-item].active-link .mdc-list-item__primary-text {
+  color: #fff;
+  font-weight: 600;
+}
+
+.page-content {
+  color: var(--af-text);
+  background: var(--af-background);
+}
+
+.page-content .page-heading {
+  align-items: flex-start;
+  margin: 0 0 21px;
+}
+
+.page-content .page-heading h1 {
+  color: var(--af-text);
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.45px;
+}
+
+.page-content .page-heading .breadcrumb,
+.page-content .page-heading .page-description {
+  color: var(--af-muted);
+}
+
+.page-content .page-heading .create-button,
+.page-content button.mat-mdc-unelevated-button,
+.page-content a.mat-mdc-unelevated-button {
+  border-radius: 5px;
+  color: #fff;
+  background: var(--af-primary);
+}
+
+.page-content .page-heading .create-button:hover,
+.page-content button.mat-mdc-unelevated-button:hover,
+.page-content a.mat-mdc-unelevated-button:hover {
+  background: var(--af-primary-hover);
+}
+
+.page-content .category-card,
+.page-content .product-card,
+.page-content .employee-card,
+.page-content .inventory-card,
+.page-content .assignment-card,
+.page-content .history-card,
+.page-content .return-card,
+.page-content .history-card,
+.page-content .entry-card,
+.page-content .products-card,
+.page-content .assets-card,
+.page-content .scan-card,
+.page-content .details-card {
+  border-color: var(--af-border);
+  border-radius: 7px;
+  background: var(--af-surface);
+  box-shadow: 0 2px 8px rgb(35 49 42 / 4%);
+}
+
+.page-content .table-toolbar h2,
+.page-content .assets-heading h2 {
+  color: var(--af-text);
+}
+
+.page-content .table-toolbar p,
+.page-content .assets-heading p {
+  color: var(--af-muted);
+}
+
+.page-content .table-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-content .table-actions .mat-mdc-form-field {
+  width: 235px;
+}
+
+.page-content .table-scroll {
+  overflow-x: auto;
+}
+
+.page-content table.mat-mdc-table,
+.page-content table.asset-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--af-text);
+  font-size: 12px;
+}
+
+.page-content table.mat-mdc-table th.mat-mdc-header-cell,
+.page-content table.asset-table thead th {
+  height: 42px;
+  border-right: 1px solid var(--af-border);
+  border-bottom: 1px solid var(--af-border);
+  color: #4d5954;
+  background: var(--af-table-header);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.page-content table.mat-mdc-table td.mat-mdc-cell,
+.page-content table.asset-table tbody td {
+  height: 44px;
+  border-right: 1px solid #e7eae9;
+  border-bottom: 1px solid #e7eae9;
+  color: #414b47;
+  font-size: 12px;
+}
+
+.page-content table.mat-mdc-table th:last-child,
+.page-content table.mat-mdc-table td:last-child,
+.page-content table.asset-table th:last-child,
+.page-content table.asset-table td:last-child {
+  border-right: 0;
+}
+
+.page-content table.mat-mdc-table tr:last-child td,
+.page-content table.asset-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.page-content table.mat-mdc-table a,
+.page-content table.asset-table a {
+  color: var(--af-link);
+}
+
+.page-content .mat-mdc-paginator {
+  border-top: 1px solid var(--af-border);
+  background: var(--af-surface);
+  color: var(--af-muted);
+  font-size: 11px;
+}
+
+.page-content table.mat-mdc-table tr.mat-mdc-row:hover,
+.page-content table.asset-table tbody tr:hover {
+  background: #f8f9f9;
+}
+
+.page-content .export-button,
+.page-content .view-button {
+  border-color: #cfd6d3;
+  border-radius: 5px;
+  color: #43514b;
+  background: #fff;
+}
+
+.page-content .export-button:hover,
+.page-content .view-button:hover {
+  border-color: var(--af-primary);
+  color: var(--af-primary);
+}
+
+.page-content .table-toolbar .search-field .mdc-notched-outline__leading,
+.page-content .table-toolbar .search-field .mdc-notched-outline__notch,
+.page-content .table-toolbar .search-field .mdc-notched-outline__trailing {
+  border-color: #d5dcda;
+}
+
+.page-content .mat-mdc-form-field-infix {
+  min-height: 42px;
+}
+
+.page-content .metric-card,
+.page-content .panel,
+.page-content .scan-card,
+.page-content .details-card,
+.page-content .entry-card,
+.page-content .placeholder-card,
+.page-content .report-card {
+  border-color: var(--af-border);
+  border-radius: 7px;
+}
+
+.app-shell .sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+  padding-inline: 8px;
+}
+
+.app-shell .sidebar.collapsed .nav-label,
+.app-shell .sidebar.collapsed a[mat-list-item] span,
+.app-shell .sidebar.collapsed .sidebar-footer > span:last-child {
+  display: none;
+}
+
+.app-shell .sidebar.collapsed a[mat-list-item] {
+  justify-content: center;
+  padding: 0;
+}
+
+.app-shell .sidebar.collapsed a[mat-list-item] mat-icon {
+  margin: 0;
+}
+
+.app-shell .sidebar.collapsed .sidebar-footer {
+  justify-content: center;
+  left: 0;
+}
+
+@media (max-width: 760px) {
+  .app-shell .sidebar,
+  .app-shell .sidebar.collapsed {
+    width: min(280px, 82vw);
+    padding: 23px 10px 68px;
+  }
+
+  .app-shell .sidebar.collapsed .nav-label,
+  .app-shell .sidebar.collapsed a[mat-list-item] span,
+  .app-shell .sidebar.collapsed .sidebar-footer > span:last-child {
+    display: initial;
+  }
+
+  .app-shell .sidebar.collapsed a[mat-list-item] {
+    justify-content: initial;
+    padding-inline: 16px;
+  }
+
+  .app-shell .sidebar.collapsed a[mat-list-item] mat-icon {
+    margin-right: 16px;
+  }
+
+  .app-shell .sidebar.collapsed .sidebar-footer {
+    justify-content: flex-start;
+    left: 22px;
+  }
+
+  .page-content .page-heading {
+    gap: 12px;
+  }
+
+  .page-content .page-heading h1 {
+    font-size: 22px;
+  }
+
+  .page-content .table-toolbar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .page-content .table-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .page-content .table-actions .mat-mdc-form-field {
+    width: min(100%, 260px);
+  }
+}
+
+@page {
+  margin: 5mm;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .barcode-print-area,
+  .barcode-print-area * {
+    visibility: visible !important;
+  }
+
+  .barcode-print-area {
+    position: fixed !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: #fff !important;
+  }
+
+  .print-controls {
+    display: none !important;
+  }
+
+  .label-preview {
+    gap: 0 !important;
+  }
+
+  .asset-label {
+    break-inside: avoid;
+    border: 0 !important;
+    border-radius: 0 !important;
+    print-color-adjust: exact;
+  }
 }

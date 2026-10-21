@@ -56,6 +56,20 @@ public sealed class StockSqlIntegrationTests
             Assert.Equal(2, individualReceipt.Receipt.Quantity);
             Assert.Equal(2, await context.AssetUnits.CountAsync(
                 unit => unit.ProductId == individualProduct.ProductId));
+            var createdAssets = await context.AssetUnits
+                .Where(unit => unit.ProductId == individualProduct.ProductId)
+                .OrderBy(unit => unit.AssetUnitId)
+                .ToListAsync();
+            Assert.All(createdAssets, asset =>
+                Assert.Equal($"AST-{asset.AssetUnitId:D6}", asset.AssetCode));
+            Assert.Equal(
+                createdAssets.Count,
+                createdAssets.Select(asset => asset.AssetCode).Distinct().Count());
+            var barcodeDetails = await service.GetAssetByCodeAsync(
+                createdAssets[0].AssetCode,
+                CancellationToken.None);
+            Assert.Equal(createdAssets[0].AssetUnitId, barcodeDetails!.AssetUnitId);
+            Assert.Equal(individualProduct.ProductName, barcodeDetails.AssetName);
             Assert.Equal(2, await context.StockMovements.CountAsync(
                 movement => movement.ReferenceId == individualReceipt.Receipt.ReceiptId));
             Assert.Equal(
@@ -157,6 +171,7 @@ public sealed class StockSqlIntegrationTests
             Assert.Equal(2, history.TotalCount);
             Assert.All(history.Items, item => Assert.Equal("integration-test", item.ReceivedBy));
         }
+
         finally
         {
             await transaction.RollbackAsync();
@@ -169,6 +184,83 @@ public sealed class StockSqlIntegrationTests
                 || item.ProductName == inactiveProduct.ProductName));
         Assert.False(await context.AssetCategories.AnyAsync(
             item => item.CategoryName == category.CategoryName));
+    }
+
+    [SqlServerFact]
+    public async Task BulkStockConversionCreatesUniqueAssetsAndPreservesReceiptDetails()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("ITAM_TEST_SQL_CONNECTION")!;
+        var options = new DbContextOptionsBuilder<AssetManagementDbContext>()
+            .UseSqlServer(connectionString)
+            .Options;
+
+        await using var context = new AssetManagementDbContext(options);
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var suffix = Guid.NewGuid().ToString("N");
+        var category = new AssetCategory
+        {
+            CategoryName = $"Bulk conversion {suffix}",
+            IsActive = true,
+            CreatedBy = "integration-test",
+        };
+        context.AssetCategories.Add(category);
+        await context.SaveChangesAsync();
+        var product = Product(category, $"Bulk conversion {suffix}", TrackingType.Bulk);
+        context.AssetProducts.Add(product);
+        await context.SaveChangesAsync();
+        var service = new StockServiceImpl(new StockRepository(context));
+        var request = new ReceiveBulkStockRequest(
+            Guid.NewGuid(),
+            product.ProductId,
+            3,
+            125m,
+            new DateTime(2026, 10, 1),
+            new DateTime(2027, 10, 1),
+            "Good",
+            "Integration supplier",
+            $"CONVERT-{suffix}",
+            "Bulk conversion test");
+
+        try
+        {
+            var received = await service.ReceiveBulkAsync(
+                request, "integration-test", CancellationToken.None);
+            var result = await service.ConvertBulkStockToIndividualAsync(
+                product.ProductId, "integration-test", CancellationToken.None);
+
+            Assert.Equal(3, result.AssetsCreated);
+            Assert.Equal(TrackingType.Individual, product.TrackingType);
+            var units = await context.AssetUnits
+                .Where(unit => unit.ProductId == product.ProductId)
+                .OrderBy(unit => unit.AssetUnitId)
+                .ToListAsync();
+            Assert.Equal(3, units.Count);
+            Assert.Equal(3, units.Select(unit => unit.AssetCode).Distinct().Count());
+            Assert.All(units, unit =>
+            {
+                Assert.Equal(new DateTime(2026, 10, 1), unit.PurchaseDate);
+                Assert.Equal(new DateTime(2027, 10, 1), unit.WarrantyExpiryDate);
+                Assert.Equal(125m, unit.PurchaseCost);
+                Assert.Equal(AssetStatus.Available, unit.Status);
+            });
+            var scanned = await service.GetAssetByCodeAsync(
+                units[0].AssetCode, CancellationToken.None);
+            Assert.NotNull(scanned);
+            Assert.Equal(product.ProductName, scanned.AssetName);
+            var receipt = await service.GetReceiptAsync(
+                received.Receipt.ReceiptId, CancellationToken.None);
+            Assert.Equal(3, Assert.Single(receipt!.Items).Assets.Count);
+            Assert.Equal(
+                3,
+                await context.StockMovements.CountAsync(movement =>
+                    movement.ProductId == product.ProductId
+                    && movement.AssetUnitId != null
+                    && movement.MovementType == MovementType.Adjustment));
+        }
+        finally
+        {
+            await transaction.RollbackAsync();
+        }
     }
 
     private static AssetProduct Product(

@@ -1,0 +1,13 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.1","options":{},"platform":"win32","wallTime":1792404960395,"monotonicTime":10222.958,"sdkLanguage":"javascript","title":"asset-management.spec.ts:11 › authenticates and exercises category, product, stock, employee, and assignment flows"}
+{"type":"before","callId":"gqii@78","startTime":16911.249,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/assetcategories","method":"GET"}}
+{"type":"log","callId":"gqii@78","time":16923.432,"message":"→ GET https://localhost:4301/api/assetcategories"}
+{"type":"log","callId":"gqii@78","time":16923.454,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36"}
+{"type":"log","callId":"gqii@78","time":16923.458,"message":"  accept: */*"}
+{"type":"log","callId":"gqii@78","time":16923.462,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"gqii@78","time":16944.996,"message":"← 401 Unauthorized"}
+{"type":"log","callId":"gqii@78","time":16945.007,"message":"  vary: Origin"}
+{"type":"log","callId":"gqii@78","time":16945.011,"message":"  content-length: 0"}
+{"type":"log","callId":"gqii@78","time":16945.014,"message":"  connection: close"}
+{"type":"log","callId":"gqii@78","time":16945.016,"message":"  date: Mon, 19 Oct 2026 10:16:07 GMT"}
+{"type":"log","callId":"gqii@78","time":16945.018,"message":"  server: Kestrel"}
+{"type":"after","callId":"gqii@78","endTime":16945.154,"result":{"response":{"url":"https://localhost:4301/api/assetcategories","status":401,"statusText":"Unauthorized","headers":[{"name":"Vary","value":"Origin"},{"name":"content-length","value":"0"},{"name":"connection","value":"close"},{"name":"date","value":"Mon, 19 Oct 2026 10:16:07 GMT"},{"name":"server","value":"Kestrel"}],"securityDetails":{"protocol":"TLSv1.3","subjectName":"localhost","validFrom":1784014696,"validTo":1815550696,"issuer":"localhost"},"serverAddr":{"ipAddress":"127.0.0.1","port":4301},"timing":{"startTime":1792404967086,"domainLookupStart":0,"domainLookupEnd":13.122999999999593,"connectStart":13.122999999999593,"secureConnectionStart":15.511999999998807,"connectEnd":18.33299999999872,"requestStart":18.33299999999872,"responseStart":28.911000000000058},"responseEndTiming":31.127000000000407,"fetchUid":"58dd210cc466d2cd6c877dcc6766885e"}}}

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
@@ -45,8 +45,8 @@ export class CategoryDialog {
   protected readonly data = inject<CategoryDialogData>(MAT_DIALOG_DATA);
   protected readonly isView = this.data.mode === 'view';
   protected readonly isEdit = this.data.mode === 'edit';
-  protected submitting = false;
-  protected errorMessage = '';
+  protected readonly submitting = signal(false);
+  protected readonly errorMessage = signal('');
 
   protected readonly form = this.formBuilder.nonNullable.group({
     categoryName: [
@@ -69,7 +69,7 @@ export class CategoryDialog {
   }
 
   protected submit(): void {
-    this.errorMessage = '';
+    this.errorMessage.set('');
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -86,11 +86,11 @@ export class CategoryDialog {
       return;
     }
 
-    this.submitting = true;
+    this.submitting.set(true);
     const operation = this.isEdit
       ? this.categoryService.update(this.data.category!.categoryId, request)
       : this.categoryService.create(request);
-    operation.pipe(finalize(() => (this.submitting = false))).subscribe({
+    operation.pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: (category) =>
         this.dialogRef.close({
           action: this.isEdit ? 'updated' : 'created',
@@ -101,13 +101,14 @@ export class CategoryDialog {
           .flat()
           .filter((message): message is string => typeof message === 'string')
           .join(' ');
-        this.errorMessage =
+        this.errorMessage.set(
           error.status === 409
             ? (error.error?.detail ?? 'A category with this name already exists.')
             : (error.error?.detail ??
               (validationMessages ||
                 error.error?.title ||
-                'Could not save this category. Please try again.'));
+                'Could not save this category. Please try again.')),
+        );
       },
     });
   }

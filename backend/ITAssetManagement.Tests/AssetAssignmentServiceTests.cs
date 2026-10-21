@@ -98,6 +98,49 @@ public sealed class AssetAssignmentServiceTests
         Assert.Null(repository.SavedAssignment);
     }
 
+    [Fact]
+    public async Task ReturnAsync_RecordsPartialReturnAndReturnedCondition()
+    {
+        var repository = new FakeAssetAssignmentRepository(TrackingType.Individual);
+        var service = new AssetAssignmentServiceImpl(repository);
+        var assignment = await service.CreateAsync(
+            Request(assetUnitIds: [12, 14], quantity: 2),
+            "it-staff",
+            CancellationToken.None);
+
+        var result = await service.ReturnAsync(
+            assignment.Assignment.AssignmentId,
+            new ReturnAssetAssignmentRequest(
+                assignment.Assignment.Items[0].AssignmentItemId,
+                1,
+                new DateTime(2026, 10, 21),
+                "Damaged",
+                "Cracked casing"),
+            "it-staff",
+            CancellationToken.None);
+
+        Assert.Equal("Partially Returned", result.Status);
+        Assert.Equal(1, result.Items[0].ReturnedQuantity);
+        Assert.Equal(0, result.Items[0].OutstandingQuantity);
+        Assert.Equal(AssetCondition.Damaged, repository.ReturnedCondition);
+    }
+
+    [Fact]
+    public async Task ReturnAsync_RejectsUnknownReturnedCondition()
+    {
+        var repository = new FakeAssetAssignmentRepository(TrackingType.Individual);
+        var service = new AssetAssignmentServiceImpl(repository);
+
+        await Assert.ThrowsAsync<InvalidAssetAssignmentException>(() =>
+            service.ReturnAsync(
+                42,
+                new ReturnAssetAssignmentRequest(1, 1, new DateTime(2026, 10, 21), "Unknown", null),
+                "it-staff",
+                CancellationToken.None));
+
+        Assert.Null(repository.ReturnedCondition);
+    }
+
     private static CreateAssetAssignmentRequest Request(
         Guid? idempotencyKey = null,
         IReadOnlyList<int>? assetUnitIds = null,
@@ -115,6 +158,7 @@ public sealed class AssetAssignmentServiceTests
         : IAssetAssignmentRepository
     {
         public AssetAssignment? SavedAssignment { get; private set; }
+        public AssetCondition? ReturnedCondition { get; private set; }
 
         public Employee Employee { get; init; } = new()
         {
@@ -185,8 +229,10 @@ public sealed class AssetAssignmentServiceTests
         {
             assignment.AssignmentId = 42;
             assignment.Employee = Employee;
+            var itemId = 1;
             foreach (var item in assignment.Items)
             {
+                item.AssignmentItemId = itemId++;
                 item.Product = new AssetProduct
                 {
                     ProductId = item.ProductId,
@@ -203,6 +249,30 @@ public sealed class AssetAssignmentServiceTests
 
             SavedAssignment = assignment;
             return Task.FromResult((assignment, true));
+        }
+
+        public Task<AssetAssignment> ReturnAsync(
+            int assignmentId,
+            ReturnAssetAssignmentRequest request,
+            AssetCondition returnedCondition,
+            string? actor,
+            CancellationToken cancellationToken)
+        {
+            var assignment = SavedAssignment
+                ?? throw new InvalidOperationException("Create an assignment before returning assets.");
+            var item = assignment.Items.Single(item =>
+                item.AssignmentItemId == request.AssignmentItemId);
+            item.Returns.Add(new AssetReturn
+            {
+                ReturnId = 1,
+                AssignmentItemId = item.AssignmentItemId,
+                ReturnQuantity = request.Quantity,
+                ReturnDate = request.ReturnDate,
+                ReturnedCondition = returnedCondition,
+                Remarks = request.Remarks,
+            });
+            ReturnedCondition = returnedCondition;
+            return Task.FromResult(assignment);
         }
     }
 }

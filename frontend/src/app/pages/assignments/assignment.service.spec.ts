@@ -41,6 +41,19 @@ describe('AssignmentService', () => {
     request.flush({ items: [], totalCount: 0, page: 2, pageSize: 10 });
   });
 
+  it('filters assignments with outstanding returns', () => {
+    service.getPage({
+      page: 1,
+      pageSize: 25,
+      returnableOnly: true,
+    }).subscribe();
+
+    const request = httpTesting.expectOne((candidate) =>
+      candidate.url === '/api/assetassignments');
+    expect(request.request.params.get('returnableOnly')).toBe('true');
+    request.flush({ items: [], totalCount: 0, page: 1, pageSize: 25 });
+  });
+
   it('loads available products, stock and individual assets', () => {
     service.getActiveProducts().subscribe();
     const products = httpTesting.expectOne('/api/assetassignments/products');
@@ -81,6 +94,23 @@ describe('AssignmentService', () => {
     service.create(body).subscribe();
 
     const request = httpTesting.expectOne('/api/assetassignments');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.body).toEqual(body);
+    request.flush({ assignmentId: 10 });
+  });
+
+  it('posts partial return details to the selected assignment', () => {
+    const body = {
+      assignmentItemId: 12,
+      quantity: 1,
+      returnDate: '2026-10-21',
+      returnedCondition: 'Good',
+      remarks: 'Returned in good condition',
+    };
+    service.returnAssets(10, body).subscribe();
+
+    const request = httpTesting.expectOne('/api/assetassignments/10/returns');
     expect(request.request.method).toBe('POST');
     expect(request.request.withCredentials).toBe(true);
     expect(request.request.body).toEqual(body);

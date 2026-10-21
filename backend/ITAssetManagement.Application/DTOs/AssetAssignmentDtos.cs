@@ -49,12 +49,19 @@ public sealed record AvailableStockResponse(
 
 public sealed record CreateAssetAssignmentRequest(
     Guid IdempotencyKey,
-    [property: Range(1, int.MaxValue)] int EmployeeId,
-    [property: Range(1, int.MaxValue)] int ProductId,
+    [param: Range(1, int.MaxValue)] int EmployeeId,
+    [param: Range(1, int.MaxValue)] int ProductId,
     IReadOnlyList<int>? AssetUnitIds,
-    [property: Range(0, int.MaxValue)] int Quantity,
-    [property: Required] DateTime AssignedDate,
-    [property: StringLength(1000)] string? Remarks);
+    [param: Range(0, int.MaxValue)] int Quantity,
+    [param: Required] DateTime AssignedDate,
+    [param: StringLength(1000)] string? Remarks);
+
+public sealed record ReturnAssetAssignmentRequest(
+    [param: Range(1, int.MaxValue)] int AssignmentItemId,
+    [param: Range(1, int.MaxValue)] int Quantity,
+    [param: Required] DateTime ReturnDate,
+    [param: Required, StringLength(30)] string ReturnedCondition,
+    [param: StringLength(1000)] string? Remarks);
 
 public sealed record AssetAssignmentItemResponse(
     int AssignmentItemId,
@@ -101,6 +108,7 @@ public sealed record AssetAssignmentListFilter(
     int Page,
     int PageSize,
     string SortBy,
-    bool SortDescending);
+    bool SortDescending,
+    bool ReturnableOnly = false);
 
 public sealed record AssetAssignmentSaveResult(AssetAssignmentResponse Assignment, bool Created);

@@ -24,13 +24,14 @@ public sealed class AssetAssignmentsController(IAssetAssignmentService assignmen
         [FromQuery] int pageSize = 25,
         [FromQuery] string? sortBy = null,
         [FromQuery] string? sortDirection = null,
+        [FromQuery] bool returnableOnly = false,
         CancellationToken cancellationToken = default)
     {
         try
         {
             return Ok(await assignmentService.GetPageAsync(
                 search, employeeId, productId, startDate, endDate, page, pageSize,
-                sortBy, sortDirection, cancellationToken));
+                sortBy, sortDirection, cancellationToken, returnableOnly));
         }
         catch (InvalidAssetAssignmentException exception)
         {
@@ -147,6 +148,30 @@ public sealed class AssetAssignmentsController(IAssetAssignmentService assignmen
         {
             return BadRequest(CreateProblem(
                 StatusCodes.Status400BadRequest, "Invalid assignment", exception.Message));
+        }
+    }
+
+    [HttpPost("{id:int}/returns")]
+    [Authorize(Policy = AuthPolicies.AssignAndReturnAssets)]
+    public async Task<ActionResult<AssetAssignmentResponse>> Return(
+        int id,
+        ReturnAssetAssignmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await assignmentService.ReturnAsync(
+                id, request, CurrentActor(), cancellationToken));
+        }
+        catch (AssetAssignmentConflictException exception)
+        {
+            return Conflict(CreateProblem(
+                StatusCodes.Status409Conflict, "Return conflict", exception.Message));
+        }
+        catch (InvalidAssetAssignmentException exception)
+        {
+            return BadRequest(CreateProblem(
+                StatusCodes.Status400BadRequest, "Invalid return", exception.Message));
         }
     }
 

@@ -14,7 +14,8 @@ public interface IAssetAssignmentService
         int pageSize,
         string? sortBy,
         string? sortDirection,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        bool returnableOnly = false);
     Task<AssetAssignmentResponse?> GetByIdAsync(
         int assignmentId,
         CancellationToken cancellationToken);
@@ -31,6 +32,11 @@ public interface IAssetAssignmentService
         CancellationToken cancellationToken);
     Task<AssetAssignmentSaveResult> CreateAsync(
         CreateAssetAssignmentRequest request,
+        string? actor,
+        CancellationToken cancellationToken);
+    Task<AssetAssignmentResponse> ReturnAsync(
+        int assignmentId,
+        ReturnAssetAssignmentRequest request,
         string? actor,
         CancellationToken cancellationToken);
 }

@@ -1,6 +1,10 @@
 # IT Asset Management
 
-Angular frontend and ASP.NET Core API for managing organizational IT assets. Asset categories, products, stock receipts, inventory, employees, and asset assignments are implemented; return processing, reports, and other unfinished workflows remain placeholders.
+Angular frontend and ASP.NET Core API for managing organizational IT assets. Asset categories, products, stock receipts, inventory, employees, asset assignments, the dashboard, returns, asset history, and inventory/assignment reports are implemented.
+
+## Asset barcodes
+
+Individually tracked assets use their unique `AssetCode` (for example, `AST-000123`) as the QR Code or Code 128 value. The code is assigned when the asset is received and is protected by the existing unique database index; Inventory renders a Code 128 barcode for each individual asset, and the Generate Barcodes menu page supports label generation for existing assets without a schema migration. Admins and IT staff can convert eligible Bulk stock into individual asset records from that page; conversion is blocked when stock is assigned, damaged/unavailable, or cannot be reconciled to receipt details. Purchase date, warranty, unit cost, and condition are carried forward from receipt records, while serial numbers remain blank. Barcode lookup is available to roles with inventory access. Labels support preview, multi-select printing, configurable company name and common label sizes. Camera scanning requires a secure browser context (HTTPS or localhost); USB scanners can enter the same asset code in the scan field.
 
 ## Project structure
 
@@ -20,7 +24,7 @@ The API references Application and Infrastructure. Application references Domain
 
 ## Asset assignments
 
-The assignment screen is available at `/assign-assets`. Authenticated Admin and ITStaff users can assign available individual assets or bulk stock; assignment history is readable by roles allowed to view inventory. Bulk assignments allocate FIFO receipt batches, and individual assignments update the asset-unit status. Requests support idempotency to avoid duplicate assignments after retries.
+The assignment screen is available at `/assign-assets`. Authenticated Admin and ITStaff users can assign available individual assets or bulk stock; assignment history is readable by roles allowed to view inventory. Bulk assignments allocate FIFO receipt batches, and individual assignments update the asset-unit status. Requests support idempotency to avoid duplicate assignments after retries. Dashboard metrics summarize inventory and open assignments. Admin and ITStaff users can record partial or full returns, including returned condition and remarks; damaged returns remain unavailable for reassignment.
 
 ## Run the frontend
 

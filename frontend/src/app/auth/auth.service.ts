@@ -20,7 +20,10 @@ export class AuthService {
       switchMap(() =>
         this.http.post<AuthenticatedUser>('/api/auth/login', request, { withCredentials: true }),
       ),
-      tap((user) => this.currentUser.set(user)),
+      switchMap((user) => {
+        this.currentUser.set(user);
+        return this.refreshCsrfToken().pipe(map(() => user));
+      }),
     );
   }
 
@@ -35,14 +38,20 @@ export class AuthService {
 
           return this.ensureCsrfToken().pipe(
             switchMap(() =>
-              this.http.post<AuthenticatedUser>(
-                '/api/auth/refresh',
-                {},
-                { withCredentials: true },
-              ),
+              this.http
+                .post<AuthenticatedUser>(
+                  '/api/auth/refresh',
+                  {},
+                  { withCredentials: true },
+                )
+                .pipe(
+                  catchError((refreshError: HttpErrorResponse) =>
+                    refreshError.status === 401 ? of(null) : throwError(() => refreshError),
+                  ),
+                ),
             ),
-            catchError((refreshError: HttpErrorResponse) =>
-              refreshError.status === 401 ? of(null) : throwError(() => refreshError),
+            switchMap((user) =>
+              user ? this.refreshCsrfToken().pipe(map(() => user)) : of(null),
             ),
           );
         }),
@@ -55,7 +64,10 @@ export class AuthService {
       switchMap(() =>
         this.http.post<void>('/api/auth/logout', {}, { withCredentials: true }),
       ),
-      tap(() => this.currentUser.set(null)),
+      tap(() => {
+        this.currentUser.set(null);
+        this.csrfRequest = undefined;
+      }),
     );
   }
 
@@ -90,5 +102,10 @@ export class AuthService {
     }
 
     return this.csrfRequest;
+  }
+
+  private refreshCsrfToken(): Observable<void> {
+    this.csrfRequest = undefined;
+    return this.ensureCsrfToken();
   }
 }

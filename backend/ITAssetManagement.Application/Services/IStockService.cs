@@ -31,8 +31,18 @@ public interface IStockService
     Task<IReadOnlyList<StockAssetUnitResponse>?> GetProductUnitsAsync(
         int productId,
         CancellationToken cancellationToken);
+    Task<AssetBarcodeDetailsResponse?> GetAssetByCodeAsync(
+        string assetCode,
+        CancellationToken cancellationToken);
+    Task<BulkStockConversionResponse> ConvertBulkStockToIndividualAsync(
+        int productId,
+        string? actor,
+        CancellationToken cancellationToken);
     Task<PagedStockMovementsResponse> GetMovementsAsync(
         int? productId,
+        string? movementType,
+        DateTime? startDate,
+        DateTime? endDate,
         int page,
         int pageSize,
         CancellationToken cancellationToken);

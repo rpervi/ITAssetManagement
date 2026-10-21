@@ -1,0 +1,140 @@
+:host {
+  display: block;
+}
+
+.barcode-print-area {
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid #e9ecf3;
+  border-radius: 9px;
+  background: #fafbfc;
+}
+
+.print-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.print-controls > div {
+  margin-right: auto;
+}
+
+.print-controls h3 {
+  margin: 0;
+  color: #28314c;
+  font-size: 13px;
+}
+
+.print-controls p {
+  margin: 4px 0 0;
+  color: #9299aa;
+  font-size: 10px;
+}
+
+.print-controls mat-form-field {
+  width: 145px;
+  margin-bottom: -1.25em;
+}
+
+.print-controls button {
+  min-height: 40px;
+  background: #4059d9;
+  font-size: 11px;
+}
+
+.label-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.asset-label {
+  display: flex;
+  width: 70mm;
+  height: 35mm;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 2mm;
+  border: 1px dashed #cbd1dd;
+  border-radius: 2px;
+  background: #fff;
+  color: #111;
+  text-align: center;
+}
+
+.size-50x30 .asset-label {
+  width: 50mm;
+  height: 30mm;
+}
+
+.size-100x50 .asset-label {
+  width: 100mm;
+  height: 50mm;
+}
+
+.company-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 8pt;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barcode-image {
+  display: block;
+  width: 90%;
+  max-height: 16mm;
+  object-fit: contain;
+}
+
+.size-50x30 .barcode-image {
+  max-height: 12mm;
+}
+
+.size-100x50 .barcode-image {
+  max-height: 26mm;
+}
+
+.barcode-image.qr-image {
+  width: auto;
+  max-width: 22mm;
+  max-height: 22mm;
+}
+
+.asset-code {
+  font-family: Consolas, monospace;
+  font-size: 8pt;
+}
+
+.asset-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 7pt;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.render-error {
+  color: #a72c23;
+  font-size: 12px;
+}
+
+@media (max-width: 850px) {
+  .print-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .print-controls > div {
+    margin-right: 0;
+  }
+
+  .print-controls mat-form-field {
+    width: 100%;
+  }
+}
